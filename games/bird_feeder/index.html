@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Покорми Птиц! V1.0.12</title>
+    
+    <!-- Подключаем скрипт куки и аналитики из корня сайта (2 шага назад) -->
+    <script src="../../analytics.js"></script>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="style_v1.0.11.css">
+</head>
+<body>
+
+    <audio id="audio-music" loop src="audio/music.ogg" type="audio/ogg" preload="auto"></audio>
+    <audio id="audio-nature" loop src="audio/nature.ogg" type="audio/ogg" preload="auto"></audio>
+
+    <div id="app-wrapper">
+        
+        <div id="game-container">
+            <!-- Верхний интерфейс -->
+            <div id="ui-top">
+                <div class="score-board">
+                    <button id="btn-pause" onclick="togglePause()">▶ Играть</button>
+                    <span id="txt-score-lbl">Счет:</span> <span id="score">0</span> | <span id="txt-record-lbl">Рекорд:</span> <span id="high-score">0</span>
+                </div>
+                
+                <!-- Панель управления звуками и Валютой выстроена справа -->
+                <div class="right-controls">
+                    <div class="audio-controls">
+                        <button class="audio-btn active btn-music-sync" id="txt-music-top" onclick="toggleAudio('audio-music', 'btn-music-sync')">🎵 Музыка</button>
+                        <button class="audio-btn active btn-nature-sync" id="txt-nature-top" onclick="toggleAudio('audio-nature', 'btn-nature-sync')">🌲 Природа</button>
+                        <button class="audio-btn active btn-sfx-sync" id="txt-sfx-top" onclick="toggleSfx()">🔊 Звуки</button>
+                    </div>
+                    <!-- Новый счетчик солнц без рамки, под кнопкой звуки -->
+                    <div id="sun-counter" class="sun-counter">☀️ <span id="sun-val">0</span></div>
+                </div>
+            </div>
+            
+            <div id="table-zone"></div>
+
+            <!-- ОВЕРЛЕИ МЕНЮ -->
+            <!-- 1. Главное меню -->
+            <div id="menu-main" class="menu-overlay">
+                <h1 class="game-title">Покорми Птиц!</h1>
+                
+                <button class="menu-btn" id="txt-play-main" onclick="startGame()" style="margin-bottom: 20px;">▶ Играть</button>
+                <button class="menu-btn" id="txt-menu-vol" onclick="openMenu('menu-settings')">⚙ Громкость</button>
+                <button class="menu-btn" id="txt-menu-lang" onclick="openMenu('menu-language')">🌍 Язык: Авто</button>
+                <button class="menu-btn" id="txt-menu-ads" onclick="openMenu('menu-ads')">📺 Реклама: ВЫКЛ</button>
+                <button class="menu-btn" id="txt-menu-lore" onclick="openMenu('menu-lore')">📖 Лор игры</button>
+                <button class="menu-btn" id="txt-menu-socials" onclick="openMenu('menu-socials')">📱 Соцсети разработчика</button>
+                <button class="menu-btn" id="txt-menu-bugs" onclick="openMenu('menu-bugs')">🐛 Сообщить об ошибке</button>
+                
+                <!-- Версия игры -->
+                <div class="game-version">V1.0.12</div>
+            </div>
+
+            <!-- 2. Выбор языка -->
+            <div id="menu-language" class="menu-overlay hidden">
+                <h2 class="menu-title" id="txt-title-lang">Язык / Language</h2>
+                
+                <div class="setting-row" style="justify-content: center; gap: 15px; width: auto; padding: 20px 40px;">
+                    <button class="audio-btn active" id="lang-auto" onclick="setLanguage('auto')" style="font-size: 18px; padding: 10px 25px;">Авто</button>
+                    <button class="audio-btn" id="lang-ru" onclick="setLanguage('ru')" style="font-size: 18px; padding: 10px 25px;">Русский</button>
+                    <button class="audio-btn" id="lang-en" onclick="setLanguage('en')" style="font-size: 18px; padding: 10px 25px;">English</button>
+                </div>
+
+                <button class="menu-btn back-btn" onclick="openMenu('menu-main')">⬅ Назад</button>
+            </div>
+
+            <!-- 3. Настройка громкости -->
+            <div id="menu-settings" class="menu-overlay hidden">
+                <h2 class="menu-title" id="txt-title-settings">Настройка громкости</h2>
+                
+                <div class="setting-row">
+                    <button class="audio-btn active btn-music-sync" id="txt-music-set" onclick="toggleAudio('audio-music', 'btn-music-sync')">🎵 Музыка</button>
+                    <input type="range" min="0" max="100" value="34" oninput="changeVolume('audio-music', this.value)">
+                </div>
+                
+                <div class="setting-row">
+                    <button class="audio-btn active btn-nature-sync" id="txt-nature-set" onclick="toggleAudio('audio-nature', 'btn-nature-sync')">🌲 Природа</button>
+                    <input type="range" min="0" max="100" value="69" oninput="changeVolume('audio-nature', this.value)">
+                </div>
+
+                <div class="setting-row">
+                    <button class="audio-btn active btn-sfx-sync" id="txt-sfx-set" onclick="toggleSfx()">🔊 Звуки</button>
+                    <input type="range" min="0" max="100" value="100" oninput="changeSfxVolume(this.value)">
+                </div>
+                
+                <div class="sfx-test-row" style="justify-content: center;">
+                    <button class="test-btn" id="txt-test-seeds" onclick="playSfx('seeds')">🌻 Семечки</button>
+                    <button class="test-btn" id="txt-test-meat" onclick="playSfx('meat')">🥩 Мясо</button>
+                </div>
+
+                <button class="menu-btn back-btn" onclick="openMenu('menu-main')">⬅ Назад</button>
+            </div>
+
+            <!-- 4. Реклама -->
+            <div id="menu-ads" class="menu-overlay hidden">
+                <h2 class="menu-title" id="txt-title-ads">Настройка рекламы</h2>
+                <div class="lore-text" id="txt-desc-ads" style="text-align: center; margin-bottom: 20px;">
+                    ...
+                </div>
+                <button class="menu-btn" id="txt-btn-enable-ads" onclick="tryToggleAds()" style="background-color: #d35400;">📺 Включить рекламу</button>
+                <button class="menu-btn back-btn" onclick="openMenu('menu-main')">⬅ Назад</button>
+            </div>
+
+            <!-- 4.1 Оповещение о рекламе -->
+            <div id="menu-ad-alert" class="menu-overlay hidden">
+                <h2 class="menu-title" id="txt-title-ad-alert" style="color: #f39c12;">Реклама</h2>
+                <div class="lore-text" id="txt-desc-ad-alert" style="text-align: center;">
+                    ...
+                </div>
+                <button class="menu-btn back-btn" onclick="openMenu('menu-main')">⬅ Назад</button>
+            </div>
+
+            <!-- 5. Лор игры -->
+            <div id="menu-lore" class="menu-overlay hidden">
+                <h2 class="menu-title" id="txt-title-lore">Лор игры</h2>
+                <div class="lore-text" id="txt-desc-lore">
+                    ...
+                </div>
+                <button class="menu-btn back-btn" onclick="openMenu('menu-main')">⬅ Назад</button>
+            </div>
+
+            <!-- 6. Ошибки -->
+            <div id="menu-bugs" class="menu-overlay hidden">
+                <h2 class="menu-title" id="txt-title-bugs">Сообщить об ошибке</h2>
+                <div class="lore-text" id="txt-desc-bugs">
+                    ...
+                </div>
+                <button class="menu-btn back-btn" onclick="openMenu('menu-main')">⬅ Назад</button>
+            </div>
+
+            <!-- 7. Соцсети -->
+            <div id="menu-socials" class="menu-overlay hidden">
+                <h2 class="menu-title" id="txt-title-socials">Соцсети разработчика</h2>
+                
+                <div class="socials-list" id="socials-container"></div>
+                
+                <button class="menu-btn back-btn" onclick="openMenu('menu-main')">⬅ Назад</button>
+            </div>
+        </div>
+
+        <!-- Нижняя панель -->
+        <div id="ui-bottom">
+            <button class="food-btn" id="btn-seeds" onclick="addFood('seeds')">🌻 Семечки</button>
+            <button class="food-btn" id="btn-meat" onclick="addFood('meat')">🥩 Мясо</button>
+            <div id="food-status"><span id="txt-food-lbl">Еда:</span><br><span id="food-count">0</span>/10</div>
+        </div>
+
+    </div>
+
+    <!-- Тексты и Локализация -->
+    <script src="lang_v1.0.11.js"></script>
+    
+    <!-- Логика Игры (ОБНОВЛЕННАЯ СИНХРОНИЗАЦИЯ ЯЗЫКА) -->
+    <script src="game_v1.0.12.js"></script>
+</body>
+</html>
