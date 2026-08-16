@@ -51,8 +51,8 @@ body { background-color: #121214; color: white; display: flex; align-items: cent
 .sun-counter {
     padding: 4px 10px;
     font-weight: bold;
-    font-size: 20px; /* Сделано чуть крупнее для читаемости */
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.9); /* Тень для контраста на любом фоне */
+    font-size: 20px; 
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.9); 
     color: white;
 }
 
