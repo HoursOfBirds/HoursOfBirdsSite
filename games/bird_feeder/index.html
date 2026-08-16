@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Покорми Птиц! V1.0.13</title>
+    <title>Покорми Птиц! V1.0.14</title>
     
     <!-- Подключаем скрипт куки и аналитики из корня сайта (2 шага назад) -->
     <script src="../../analytics.js"></script>
 
     <!-- CSS -->
-    <link rel="stylesheet" href="style_v1.0.13.css">
+    <link rel="stylesheet" href="style_v1.0.14.css">
 </head>
 <body>
 
+    <!-- Аудио-теги с путями сохранены! -->
     <audio id="audio-music" loop src="audio/music.ogg" type="audio/ogg" preload="auto"></audio>
     <audio id="audio-nature" loop src="audio/nature.ogg" type="audio/ogg" preload="auto"></audio>
 
@@ -22,7 +23,7 @@
             <!-- Верхний интерфейс -->
             <div id="ui-top">
                 <div class="score-board">
-                    <button id="btn-pause" onclick="togglePause()">▶ Играть</button>
+                    <button id="btn-pause" onclick="togglePause()">⏳ Загрузка...</button>
                     <span id="txt-score-lbl">Счет:</span> <span id="score">0</span> | <span id="txt-record-lbl">Рекорд:</span> <span id="high-score">0</span>
                 </div>
                 
@@ -45,7 +46,7 @@
             <div id="menu-main" class="menu-overlay">
                 <h1 class="game-title">Покорми Птиц!</h1>
                 
-                <button class="menu-btn" id="txt-play-main" onclick="startGame()" style="margin-bottom: 20px;">▶ Играть</button>
+                <button class="menu-btn" id="txt-play-main" onclick="startGame()" style="margin-bottom: 20px;">⏳ Загрузка...</button>
                 <button class="menu-btn" id="txt-menu-vol" onclick="openMenu('menu-settings')">⚙ Громкость</button>
                 <button class="menu-btn" id="txt-menu-lang" onclick="openMenu('menu-language')">🌍 Язык: Авто</button>
                 <button class="menu-btn" id="txt-menu-ads" onclick="openMenu('menu-ads')">📺 Реклама: ВЫКЛ</button>
@@ -54,7 +55,7 @@
                 <button class="menu-btn" id="txt-menu-bugs" onclick="openMenu('menu-bugs')">🐛 Сообщить об ошибке</button>
                 
                 <!-- Версия игры -->
-                <div class="game-version">V1.0.13</div>
+                <div class="game-version">V1.0.14</div>
             </div>
 
             <!-- 2. Выбор языка -->
@@ -154,9 +155,9 @@
     </div>
 
     <!-- Тексты и Локализация -->
-    <script src="lang_v1.0.13.js"></script>
+    <script src="lang_v1.0.14.js"></script>
     
-    <!-- Логика Игры (Античит, предзагрузка и аудио-пул) -->
-    <script src="game_v1.0.13.js"></script>
+    <!-- Логика Игры (Античит, RAM-кэш, Защита сети) -->
+    <script src="game_v1.0.15.js"></script>
 </body>
 </html>

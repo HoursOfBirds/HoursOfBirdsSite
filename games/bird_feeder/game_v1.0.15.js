@@ -1,5 +1,7 @@
 (() => {
-    
+    let isAssetsLoaded = false;
+    const memoryCache = {};
+
     function resizeContainer() {
         const wrapper = document.getElementById('app-wrapper');
         const scale = Math.min(window.innerWidth / 1350, window.innerHeight / 880, 1.5);
@@ -19,59 +21,113 @@
         pigeon: { id: 'pigeon', eats: 'enemy', scale: 1.4, images: { fly: 'pigeon_fly.png', landing: 'pigeon_landing.png', sit: 'pigeon_sit.png', eat: 'pigeon_eat.png' } }
     };
     const BIRD_KEYS = Object.keys(BIRD_TYPES);
-
-    // --- ФИКС: ПРЕДЗАГРУЗКА КАРТИНОК ---
-    const preloadedImages = {};
-    
-    function preloadAllBirdImages() {
-        const imageList = [];
-        Object.values(BIRD_TYPES).forEach(bird => {
-            imageList.push(`img/${bird.images.fly}`);
-            imageList.push(`img/${bird.images.landing}`);
-            imageList.push(`img/${bird.images.sit}`);
-            imageList.push(`img/${bird.images.eat}`);
-        });
-        imageList.push('img/seeds.png');
-        imageList.push('img/meat.png');
-
-        imageList.forEach(src => {
-            if (!preloadedImages[src]) {
-                const img = new Image();
-                img.src = src;
-                preloadedImages[src] = img;
-            }
-        });
-        console.log("Картинки птиц загружены в кэш.");
-    }
-    preloadAllBirdImages();
-
-    // --- ФИКС: АУДИО-ПУЛ (КЭШИРОВАНИЕ ЗВУКОВ) ---
     const SFX_CONFIG = { meat: 3, seeds: 22 };
+
+    // --- ФИКС: РАБОТА С ОЗУ (RAM CACHE) + МУЗЫКА ---
+    const assetList = [
+        'img/seeds.png', 
+        'img/meat.png',
+        'audio/music.ogg',   // Добавлена музыка
+        'audio/nature.ogg'   // Добавлена природа
+    ];
+    
+    Object.values(BIRD_TYPES).forEach(bird => {
+        assetList.push(`img/${bird.images.fly}`);
+        assetList.push(`img/${bird.images.landing}`);
+        assetList.push(`img/${bird.images.sit}`);
+        assetList.push(`img/${bird.images.eat}`);
+    });
+    for (let i = 1; i <= SFX_CONFIG.seeds; i++) assetList.push(`audio/Seedsfall${i}.ogg`);
+    for (let i = 1; i <= SFX_CONFIG.meat; i++) assetList.push(`audio/Meatfall${i}.ogg`);
+
+    // Вспомогательная функция: Пытается скачать файл 5 раз с паузой 1 сек
+    async function fetchWithRetry(url, retries = 5) {
+        for (let i = 0; i < retries; i++) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return await response.blob();
+            } catch (e) {
+                if (i === retries - 1) throw e; // Если последняя попытка - выбрасываем ошибку
+                console.warn(`[ОЗУ] Сбой скачивания ${url}. Попытка ${i + 2} из ${retries}...`);
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Ждем 1 секунду
+            }
+        }
+    }
+
+    async function initRAMCache() {
+        applyLocalization(); 
+        try {
+            const fetchPromises = assetList.map(async (url) => {
+                try {
+                    const blob = await fetchWithRetry(url, 5); // 5 попыток
+                    memoryCache[url] = URL.createObjectURL(blob);
+                } catch(e) {
+                    console.warn(`[ОЗУ] Не удалось скачать ${url} после 5 попыток. Включен фолбэк.`);
+                    memoryCache[url] = url; 
+                }
+            });
+            
+            await Promise.all(fetchPromises);
+            console.log("[ОЗУ] Все файлы игры (включая музыку) загружены в оперативную память.");
+            
+            initAudioPool(); 
+            
+            isAssetsLoaded = true;
+            applyLocalization(); 
+            
+            gameLoop();
+            flybyLoop();
+
+        } catch(e) {
+            console.error("Критическая ошибка кэша", e);
+            isAssetsLoaded = true;
+            applyLocalization();
+            gameLoop();
+            flybyLoop();
+        }
+    }
+
+    // --- ФИКС: АУДИО-ПУЛ ---
     const audioPool = {};
+    let musicAudio = null;
+    let natureAudio = null;
 
     function initAudioPool() {
+        // Подхватываем музыку из памяти
+        const musicUrl = memoryCache['audio/music.ogg'] || 'audio/music.ogg';
+        const natureUrl = memoryCache['audio/nature.ogg'] || 'audio/nature.ogg';
+        
+        musicAudio = new Audio(musicUrl);
+        musicAudio.loop = true;
+        musicAudio.volume = 0.34;
+
+        natureAudio = new Audio(natureUrl);
+        natureAudio.loop = true;
+        natureAudio.volume = 0.69;
+
+        // Подхватываем звуки
         audioPool['seeds'] = [];
         for (let i = 1; i <= SFX_CONFIG.seeds; i++) {
-            const audio = new Audio(`audio/Seedsfall${i}.ogg`);
+            const url = memoryCache[`audio/Seedsfall${i}.ogg`] || `audio/Seedsfall${i}.ogg`;
+            const audio = new Audio(url);
             audio.preload = "auto";
             audioPool['seeds'].push(audio);
         }
         
         audioPool['meat'] = [];
         for (let i = 1; i <= SFX_CONFIG.meat; i++) {
-            const audio = new Audio(`audio/Meatfall${i}.ogg`);
+            const url = memoryCache[`audio/Meatfall${i}.ogg`] || `audio/Meatfall${i}.ogg`;
+            const audio = new Audio(url);
             audio.preload = "auto";
             audioPool['meat'].push(audio);
         }
-        console.log("Звуки загружены в кэш.");
     }
-    initAudioPool();
 
-    // --- АНТИЧИТ УРОВЕНЬ 2: ЗАЩИТА СОХРАНЕНИЙ И ФИЛЬТР ЖЕНЬКИ ---
-    const SECRET_SALT = "H0urS_0f_B1rdS_S3cr3t_2026!"; 
+    const getSalt = () => atob("SDB1clNfMGZfQjFyZFNfUzNjcjN0XzIwMjYh"); 
     
     function generateHash(val) {
-        return btoa(val.toString() + SECRET_SALT); 
+        return btoa(val.toString() + getSalt()); 
     }
 
     function secureSave(key, val) {
@@ -85,18 +141,16 @@
         
         if (val === null) return defaultVal; 
         
-        // Обратная совместимость + Проверка на вменяемость (Sanity Check)
         if (hash === null) {
             let parsedVal = parseInt(val) || defaultVal;
             let isCheater = false;
             
-            // Если игрок якобы нафармил больше 20 солнц или 2000 очков до обновы - это Женька
             if (key === 'birdSunCoins' && parsedVal > 20) isCheater = true;
             if (key === 'birdHighScore' && parsedVal > 2000) isCheater = true;
             if (key === 'birdFedCount' && parsedVal > 2000) isCheater = true;
 
             if (isCheater) {
-                console.warn(`[Античит] Нереалистичное сохранение (${key}: ${parsedVal}). Сброс до нуля!`);
+                console.warn(`[Античит] Сброс сохранения ${key}: ${parsedVal}`);
                 secureSave(key, defaultVal); 
                 return defaultVal;
             } else {
@@ -106,7 +160,7 @@
         }
 
         if (hash !== generateHash(val)) {
-            console.warn(`[Античит] Обнаружена попытка подделки данных для ${key}! Прогресс обнулен.`);
+            console.warn(`[Античит] Подделка ${key}!`);
             secureSave(key, defaultVal); 
             return defaultVal;
         }
@@ -114,7 +168,6 @@
         return parseInt(val) || defaultVal;
     }
 
-    // --- ПЕРЕМЕННЫЕ ИГРЫ И ЭКОНОМИКА ---
     let score = 0;
     let highScore = secureLoad('birdHighScore', 0);
     let fedBirdsCount = secureLoad('birdFedCount', 0);
@@ -129,12 +182,8 @@
     let sfxVolume = 1.0;
     let adsEnabled = false;
 
-    document.getElementById('audio-music').volume = 0.34;
-    document.getElementById('audio-nature').volume = 0.69;
-
     const menus = ['menu-main', 'menu-settings', 'menu-language', 'menu-ads', 'menu-lore', 'menu-ad-alert', 'menu-bugs', 'menu-socials'];
 
-    // --- ЛОКАЛИЗАЦИЯ И ТЕКСТЫ ---
     let currentLangMode = localStorage.getItem('siteLang') || 'auto';
 
     function setText(id, text, isHTML = false) {
@@ -155,8 +204,17 @@
         const dict = GAME_TEXTS[lang];
         if (!dict) return;
 
-        setText('btn-pause', isPaused ? dict.btn_play : dict.btn_pause);
-        setText('txt-play-main', dict.btn_play);
+        let playText = isAssetsLoaded ? (isPaused ? dict.btn_play : dict.btn_pause) : dict.btn_loading;
+        let mainPlayText = isAssetsLoaded ? dict.btn_play : dict.btn_loading;
+
+        setText('btn-pause', playText);
+        setText('txt-play-main', mainPlayText);
+        
+        const btnMain = document.getElementById('txt-play-main');
+        const btnPauseTop = document.getElementById('btn-pause');
+        if (btnMain) btnMain.disabled = !isAssetsLoaded;
+        if (btnPauseTop) btnPauseTop.disabled = !isAssetsLoaded;
+
         setText('txt-menu-vol', dict.menu_vol);
         
         let langName = dict.lbl_auto;
@@ -247,11 +305,10 @@
         document.getElementById('lang-en').classList.remove('active');
         document.getElementById('lang-' + currentLangMode).classList.add('active');
         
-        applyLocalization();
         updateSunUI();
+        initRAMCache();
     });
 
-    // --- УПРАВЛЕНИЕ МЕНЮ ---
     function openMenu(menuId) {
         menus.forEach(id => {
             const el = document.getElementById(id);
@@ -261,6 +318,7 @@
     }
 
     function startGame() {
+        if (!isAssetsLoaded) return;
         isPaused = false;
         menus.forEach(id => {
             const el = document.getElementById(id);
@@ -268,18 +326,16 @@
         });
         applyLocalization(); 
         
-        const audioMusic = document.getElementById('audio-music');
-        const audioNature = document.getElementById('audio-nature');
-        
         if (document.querySelector('.btn-music-sync').classList.contains('active')) {
-            audioMusic.play().catch(e => console.warn('Музыка заблокирована браузером:', e));
+            musicAudio.play().catch(e => console.warn('Музыка заблокирована браузером:', e));
         }
         if (document.querySelector('.btn-nature-sync').classList.contains('active')) {
-            audioNature.play().catch(e => console.warn('Природа заблокирована браузером:', e));
+            natureAudio.play().catch(e => console.warn('Природа заблокирована браузером:', e));
         }
     }
 
     function pauseGame() {
+        if (!isAssetsLoaded) return;
         isPaused = true;
         openMenu('menu-main');
         applyLocalization(); 
@@ -299,7 +355,12 @@
         }
     }
 
-    function changeVolume(audioId, val) { document.getElementById(audioId).volume = val / 100; }
+    function changeVolume(audioId, val) { 
+        const v = val / 100;
+        if (audioId === 'audio-music') musicAudio.volume = v;
+        if (audioId === 'audio-nature') natureAudio.volume = v;
+    }
+    
     function changeSfxVolume(val) { sfxVolume = val / 100; }
 
     function toggleSfx() {
@@ -312,15 +373,15 @@
     }
 
     function toggleAudio(audioId, syncClass) {
-        const audio = document.getElementById(audioId);
+        const targetAudio = (audioId === 'audio-music') ? musicAudio : natureAudio;
         const buttons = document.querySelectorAll('.' + syncClass);
         const isActive = buttons[0].classList.contains('active');
         
         if (isActive) {
-            audio.pause();
+            targetAudio.pause();
             buttons.forEach(btn => btn.classList.remove('active'));
         } else {
-            audio.play().catch(e => console.warn('Блокировка аудио:', e));
+            targetAudio.play().catch(e => console.warn('Блокировка аудио:', e));
             buttons.forEach(btn => btn.classList.add('active'));
         }
     }
@@ -332,14 +393,12 @@
         const snd = audioPool[type][randomIdx];
         
         snd.currentTime = 0;
-        
         let baseVolumeMultiplier = 1.0;
         snd.volume = Math.min(sfxVolume * baseVolumeMultiplier, 1.0); 
         
         snd.play().catch(e => console.log('SFX block/missing:', e));
     }
 
-    // --- ИГРОВАЯ ЛОГИКА ---
     function addFood(type) {
         if (foodOnTable.length >= MAX_FOOD) return;
         const foodDiv = document.createElement('div');
@@ -350,7 +409,7 @@
         foodDiv.style.width = `${foodSize}px`;
         foodDiv.style.height = `${foodSize}px`;
         
-        foodDiv.style.backgroundImage = `url('img/${type}.png')`; 
+        foodDiv.style.backgroundImage = `url('${memoryCache[`img/${type}.png`] || `img/${type}.png`}')`; 
         
         const tableZone = document.getElementById('table-zone');
         const container = document.getElementById('game-container');
@@ -402,7 +461,7 @@
         birdEl.style.width = `${birdSize}px`;
         birdEl.style.height = `${birdSize}px`;
         
-        birdEl.style.backgroundImage = `url('img/${birdData.images.fly}')`;
+        birdEl.style.backgroundImage = `url('${memoryCache[`img/${birdData.images.fly}`] || `img/${birdData.images.fly}`}')`;
         birdEl.style.left = `${startX}px`;
         birdEl.style.top = `${startY}px`;
 
@@ -434,12 +493,12 @@
 
         setTimeout(() => {
             if (birdEl.dataset.fled === 'true' || !document.body.contains(birdEl)) return;
-            birdEl.style.backgroundImage = `url('img/${birdData.images.landing}')`;
+            birdEl.style.backgroundImage = `url('${memoryCache[`img/${birdData.images.landing}`] || `img/${birdData.images.landing}`}')`;
         }, 1000);
 
         setTimeout(() => {
             if (birdEl.dataset.fled === 'true' || !document.body.contains(birdEl)) return;
-            birdEl.style.backgroundImage = `url('img/${birdData.images.sit}')`;
+            birdEl.style.backgroundImage = `url('${memoryCache[`img/${birdData.images.sit}`] || `img/${birdData.images.sit}`}')`;
             setTimeout(() => approachFood(birdEl, birdData, birdSize), 500); 
         }, 2000);
     }
@@ -467,7 +526,7 @@
             const moveY = foodTop - (birdSize * 0.4);
 
             birdEl.style.transform = moveX > currentX ? 'scaleX(-1)' : 'scaleX(1)';
-            birdEl.style.backgroundImage = `url('img/${birdData.images.fly}')`; 
+            birdEl.style.backgroundImage = `url('${memoryCache[`img/${birdData.images.fly}`] || `img/${birdData.images.fly}`}')`; 
             
             birdEl.style.transition = 'top 0.5s ease-in-out, left 0.5s ease-in-out';
             birdEl.style.left = `${moveX}px`;
@@ -480,7 +539,7 @@
                 if (stillExistsIndex !== -1) {
                     foodOnTable.splice(stillExistsIndex, 1);
                     targetFoodObj.element.remove();
-                    birdEl.style.backgroundImage = `url('img/${birdData.images.eat}')`; 
+                    birdEl.style.backgroundImage = `url('${memoryCache[`img/${birdData.images.eat}`] || `img/${birdData.images.eat}`}')`; 
                     
                     if (birdData.eats === 'enemy') {
                         changeScore(-2);
@@ -498,7 +557,7 @@
                     }
                 } else {
                     if (birdData.eats !== 'enemy') changeScore(-1); 
-                    birdEl.style.backgroundImage = `url('img/${birdData.images.sit}')`;
+                    birdEl.style.backgroundImage = `url('${memoryCache[`img/${birdData.images.sit}`] || `img/${birdData.images.sit}`}')`;
                 }
                 setTimeout(() => flyAway(birdEl, birdData), 1000);
             }, 500);
@@ -512,7 +571,7 @@
     function flyAway(birdEl, birdData) {
         if (!document.body.contains(birdEl)) return;
         
-        birdEl.style.backgroundImage = `url('img/${birdData.images.fly}')`;
+        birdEl.style.backgroundImage = `url('${memoryCache[`img/${birdData.images.fly}`] || `img/${birdData.images.fly}`}')`;
         const currentX = getBirdCurrentX(birdEl);
         const flyRight = currentX > 1336 / 2;
         birdEl.style.transform = flyRight ? 'scaleX(-1)' : 'scaleX(1)'; 
@@ -566,10 +625,6 @@
     function gameLoop() { setTimeout(() => { spawnLandingBird(); gameLoop(); }, 3000 + Math.random() * 3000); }
     function flybyLoop() { setTimeout(() => { spawnFlybyBird(); flybyLoop(); }, 5000 + Math.random() * 5000); }
 
-    gameLoop();
-    flybyLoop();
-
-    // Экспортируем функции в глобальную область, чтобы кнопки HTML могли их использовать
     window.togglePause = togglePause;
     window.startGame = startGame;
     window.openMenu = openMenu;

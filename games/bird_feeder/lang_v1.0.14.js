@@ -7,6 +7,7 @@ const GAME_TEXTS = {
         
         btn_play: "▶ Играть",
         btn_pause: "⏸ Пауза",
+        btn_loading: "⏳ Загрузка...",
         btn_back: "⬅ Назад",
         
         menu_vol: "⚙ Громкость",
@@ -62,6 +63,7 @@ const GAME_TEXTS = {
         
         btn_play: "▶ Play",
         btn_pause: "⏸ Pause",
+        btn_loading: "⏳ Loading...",
         btn_back: "⬅ Back",
         
         menu_vol: "⚙ Volume",
