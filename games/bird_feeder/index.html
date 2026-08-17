@@ -1,9 +1,10 @@
+<!-- Файл: index.html | Игра: Покорми Птиц! | Версия: 1.0.15 -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Покорми Птиц! V1.0.14</title>
+    <title>Покорми Птиц! V1.0.15</title>
     
     <!-- Подключаем скрипт куки и аналитики из корня сайта (2 шага назад) -->
     <script src="../../analytics.js"></script>
@@ -13,9 +14,11 @@
 </head>
 <body>
 
-    <!-- Аудио-теги с путями сохранены! -->
-    <audio id="audio-music" loop src="audio/music.ogg" type="audio/ogg" preload="auto"></audio>
-    <audio id="audio-nature" loop src="audio/nature.ogg" type="audio/ogg" preload="auto"></audio>
+    <!--
+        Музыка и звуки природы загружаются через game_v1.0.15.js
+        в оперативную память и воспроизводятся из Blob URL.
+        Прямых audio-тегов здесь нет, чтобы исключить двойную загрузку.
+    -->
 
     <div id="app-wrapper">
         
@@ -55,7 +58,7 @@
                 <button class="menu-btn" id="txt-menu-bugs" onclick="openMenu('menu-bugs')">🐛 Сообщить об ошибке</button>
                 
                 <!-- Версия игры -->
-                <div class="game-version">V1.0.14</div>
+                <div class="game-version">V1.0.15</div>
             </div>
 
             <!-- 2. Выбор языка -->
@@ -157,7 +160,7 @@
     <!-- Тексты и Локализация -->
     <script src="lang_v1.0.14.js"></script>
     
-    <!-- Логика Игры (Античит, RAM-кэш, Защита сети) -->
+    <!-- Логика Игры: античит, RAM-кэш, музыка и SFX из оперативной памяти -->
     <script src="game_v1.0.15.js"></script>
 </body>
 </html>
