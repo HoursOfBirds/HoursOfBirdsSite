@@ -405,7 +405,7 @@
         foodDiv.className = `food-item`;
         
         const isMeat = type === 'meat';
-        const foodSize = isMeat ? 80 : 40;
+        const foodSize = isMeat ? 40 : 40;
         foodDiv.style.width = `${foodSize}px`;
         foodDiv.style.height = `${foodSize}px`;
         
@@ -481,7 +481,7 @@
         const birdSize = 100 * birdData.scale;
 
         const targetX = tableZone.offsetLeft + Math.random() * (tableZone.offsetWidth - birdSize);
-        const targetY = tableZone.offsetTop + Math.random() * (tableZone.offsetHeight - 30) - (birdSize * 0.75);
+        const targetY = tableZone.offsetTop + Math.random() * (tableZone.offsetHeight - 30) - (birdSize * 1);
 
         birdEl.style.transition = 'top 2s linear, left 2s linear';
         
@@ -523,7 +523,7 @@
             const currentX = getBirdCurrentX(birdEl);
             const offset = birdSize * 0.35;
             const moveX = foodLeft > currentX ? foodLeft - offset : foodLeft + offset;
-            const moveY = foodTop - (birdSize * 0.4);
+            const moveY = foodTop - (birdSize - 30);
 
             birdEl.style.transform = moveX > currentX ? 'scaleX(-1)' : 'scaleX(1)';
             birdEl.style.backgroundImage = `url('${memoryCache[`img/${birdData.images.fly}`] || `img/${birdData.images.fly}`}')`; 
