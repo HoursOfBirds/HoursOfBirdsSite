@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.googletagmanager.com; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com; img-src 'self' data: blob: https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
     <title>Hours of Birds - Главная</title>
 
     <!-- Подключаем скрипт куки и аналитики -->
@@ -130,9 +131,9 @@
 <body>
 
     <div class="language-switch">
-        <button class="lang-btn" id="btn-ru" onclick="setLanguage('ru')">RU</button>
+        <button class="lang-btn" id="btn-ru" data-site-language="ru">RU</button>
         <span style="color: #555;"> | </span>
-        <button class="lang-btn" id="btn-en" onclick="setLanguage('en')">EN</button>
+        <button class="lang-btn" id="btn-en" data-site-language="en">EN</button>
     </div>
 
     <div class="container">
@@ -146,50 +147,13 @@
     🎮 Игра «Покорми Птиц!»
 </a>
 
-            <a href="https://youtube.com/@hoursofbirds" target="_blank" class="link-btn">YouTube</a>
-            <a href="https://t.me/HoursOfBirds" target="_blank" class="link-btn">Telegram</a>
-            <a href="https://pikabu.ru/@HoursOfBirds" target="_blank" class="link-btn">Pikabu</a>
-            <a href="https://www.reddit.com/u/HoursOfBirds" target="_blank" class="link-btn">Reddit</a>
+            <a href="https://youtube.com/@hoursofbirds" target="_blank" rel="noopener noreferrer" class="link-btn">YouTube</a>
+            <a href="https://t.me/HoursOfBirds" target="_blank" rel="noopener noreferrer" class="link-btn">Telegram</a>
+            <a href="https://pikabu.ru/@HoursOfBirds" target="_blank" rel="noopener noreferrer" class="link-btn">Pikabu</a>
+            <a href="https://www.reddit.com/u/HoursOfBirds" target="_blank" rel="noopener noreferrer" class="link-btn">Reddit</a>
         </div>
     </div>
 
-    <script>
-        const translations = {
-            ru: {
-                title: "Hours of Birds",
-                description: "Wow! Основной сайт всё ещё в разработке. Но вы уже можете поиграть в игру или посетить официальные соцсети проекта!",
-                btn_game: "🎮 Игра «Покорми Птиц!»"
-            },
-            en: {
-                title: "Hours of Birds",
-                description: "Wow! The main website is still under development. But you can already play the game or visit the project's official social networks!",
-                btn_game: "🎮 Play «Feed the Birds!»"
-            }
-        };
-
-        // Читаем глобальный язык сайта из памяти при загрузке
-        let savedLang = localStorage.getItem('siteLang');
-        if (!savedLang) {
-            savedLang = navigator.language.startsWith('ru') ? 'ru' : 'en';
-        }
-
-        function setLanguage(lang) {
-            // СОХРАНЯЕМ ВЫБОР ДЛЯ ИГРЫ И ОСТАЛЬНОГО САЙТА
-            localStorage.setItem('siteLang', lang);
-
-            document.getElementById('title').innerText = translations[lang].title;
-            document.getElementById('description').innerText = translations[lang].description;
-            document.getElementById('btn-game').innerText = translations[lang].btn_game;
-
-            document.getElementById('btn-ru').classList.remove('active');
-            document.getElementById('btn-en').classList.remove('active');
-            document.getElementById('btn-' + lang).classList.add('active');
-        }
-
-        // Запускаем при загрузке
-        document.addEventListener('DOMContentLoaded', () => {
-            setLanguage(savedLang);
-        });
-    </script>
+    <script src="site.js" defer></script>
 </body>
 </html>

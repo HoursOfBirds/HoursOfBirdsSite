@@ -1,40 +1,59 @@
-// Скрипт для управления Cookie-баннером и Google Analytics
-
-// Твой ID аналитики
+// Управление согласием на аналитику Google Analytics.
+// Аналитика не загружается до явного согласия пользователя.
 const GA_ID = 'G-VQQGBNZLET';
+const CONSENT_KEY = 'cookieConsent';
+let analyticsInjected = false;
 
-// Функция запуска Google Analytics
 function injectGoogleAnalytics() {
-    // Создаем первый скрипт (внешний)
-    const script1 = document.createElement('script');
-    script1.async = true;
-    script1.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
-    document.head.appendChild(script1);
+    if (analyticsInjected || localStorage.getItem(CONSENT_KEY) !== 'true') return;
 
-    // Создаем второй скрипт (инициализация)
-    const script2 = document.createElement('script');
-    script2.innerHTML = `
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', '${GA_ID}');
-    `;
-    document.head.appendChild(script2);
+    analyticsInjected = true;
+    window[`ga-disable-${GA_ID}`] = false;
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function gtag() {
+        window.dataLayer.push(arguments);
+    };
+    window.gtag('js', new Date());
+    window.gtag('config', GA_ID);
+
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(GA_ID)}`;
+    script.referrerPolicy = 'strict-origin-when-cross-origin';
+    document.head.appendChild(script);
 }
 
-// Функция создания баннера согласия
-function createCookieBanner() {
-    // Проверяем, давал ли пользователь согласие ранее
-    if (localStorage.getItem('cookieConsent') === 'true') {
-        injectGoogleAnalytics(); // Если да, просто запускаем аналитику и выходим
-        return;
-    }
+function disableGoogleAnalytics() {
+    window[`ga-disable-${GA_ID}`] = true;
+}
 
-    // Создаем сам баннер
-    const banner = document.createElement('div');
+function createButton(text, backgroundColor) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = text;
+    Object.assign(button.style, {
+        backgroundColor,
+        color: 'white',
+        border: 'none',
+        padding: '10px 16px',
+        borderRadius: '8px',
+        fontWeight: 'bold',
+        cursor: 'pointer'
+    });
+    return button;
+}
+
+function removeConsentBanner() {
+    document.getElementById('cookie-banner')?.remove();
+}
+
+function showConsentBanner() {
+    removeConsentBanner();
+
+    const banner = document.createElement('section');
     banner.id = 'cookie-banner';
-    
-    // Настраиваем дизайн баннера
+    banner.setAttribute('role', 'dialog');
+    banner.setAttribute('aria-label', 'Настройки cookie и аналитики');
     Object.assign(banner.style, {
         position: 'fixed',
         bottom: '20px',
@@ -50,34 +69,72 @@ function createCookieBanner() {
         gap: '20px',
         zIndex: '9999',
         width: '90%',
-        maxWidth: '600px',
+        maxWidth: '650px',
         border: '1px solid #3a3a40',
         fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
     });
 
-    banner.innerHTML = `
-        <div style="flex-grow: 1; font-size: 14px; line-height: 1.5; color: #b0b0b0;">
-            <b style="color: white; font-size: 16px;">🍪 Мы используем Cookie</b><br>
-            Этот сайт использует файлы cookie и Google Analytics для сбора анонимной статистики, чтобы сделать проект лучше.
-        </div>
-        <button id="cookie-accept" style="background-color: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;">Понятно</button>
-    `;
+    const text = document.createElement('div');
+    text.style.cssText = 'flex-grow: 1; font-size: 14px; line-height: 1.5; color: #b0b0b0;';
+    const title = document.createElement('strong');
+    title.textContent = '🍪 Cookie и аналитика';
+    title.style.cssText = 'display: block; color: white; font-size: 16px; margin-bottom: 4px;';
+    const description = document.createElement('span');
+    description.textContent = 'С вашего согласия сайт использует Google Analytics для анонимной статистики. Выбор можно изменить в любое время кнопкой 🍪.';
+    text.append(title, description);
 
-    document.body.appendChild(banner);
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end;';
+    const declineButton = createButton('Не разрешать', '#555');
+    const acceptButton = createButton('Разрешить', '#4CAF50');
 
-    // Вешаем событие на кнопку "Понятно"
-    const btn = document.getElementById('cookie-accept');
-    
-    // Анимация при наведении
-    btn.onmouseover = () => btn.style.backgroundColor = '#45a049';
-    btn.onmouseout = () => btn.style.backgroundColor = '#4CAF50';
-
-    btn.addEventListener('click', () => {
-        localStorage.setItem('cookieConsent', 'true'); // Сохраняем согласие
-        banner.remove(); // Удаляем баннер
-        injectGoogleAnalytics(); // Запускаем аналитику
+    declineButton.addEventListener('click', () => {
+        localStorage.setItem(CONSENT_KEY, 'false');
+        disableGoogleAnalytics();
+        removeConsentBanner();
     });
+    acceptButton.addEventListener('click', () => {
+        localStorage.setItem(CONSENT_KEY, 'true');
+        removeConsentBanner();
+        injectGoogleAnalytics();
+    });
+    actions.append(declineButton, acceptButton);
+    banner.append(text, actions);
+    document.body.appendChild(banner);
 }
 
-// Запускаем проверку при загрузке страницы
-document.addEventListener('DOMContentLoaded', createCookieBanner);
+function createConsentSettingsButton() {
+    if (document.getElementById('cookie-settings')) return;
+
+    const button = document.createElement('button');
+    button.id = 'cookie-settings';
+    button.type = 'button';
+    button.textContent = '🍪';
+    button.title = 'Настройки cookie и аналитики';
+    button.setAttribute('aria-label', 'Настройки cookie и аналитики');
+    Object.assign(button.style, {
+        position: 'fixed',
+        right: '16px',
+        bottom: '16px',
+        zIndex: '9998',
+        border: '1px solid #3a3a40',
+        borderRadius: '50%',
+        width: '42px',
+        height: '42px',
+        backgroundColor: '#1c1c1f',
+        color: '#fff',
+        cursor: 'pointer',
+        fontSize: '20px'
+    });
+    button.addEventListener('click', showConsentBanner);
+    document.body.appendChild(button);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const consent = localStorage.getItem(CONSENT_KEY);
+    if (consent === 'true') injectGoogleAnalytics();
+    else if (consent !== 'false') showConsentBanner();
+    else disableGoogleAnalytics();
+
+    createConsentSettingsButton();
+});
