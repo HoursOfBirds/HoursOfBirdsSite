@@ -3,157 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.googletagmanager.com; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com; img-src 'self' data: blob: https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
-    <title>Hours of Birds - Главная</title>
-
-    <!-- Подключаем скрипт куки и аналитики -->
-    <script src="analytics.js"></script>
-
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
-
-        body {
-            background-color: #121214;
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .language-switch {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-        }
-
-        .lang-btn {
-            background: transparent;
-            color: #888;
-            border: none;
-            font-size: 16px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: color 0.3s;
-        }
-        .lang-btn.active { color: #4CAF50; }
-        .lang-btn:hover { color: #ffffff; }
-
-        .container {
-            margin-top: 80px;
-            max-width: 500px;
-            width: 100%;
-            text-align: center;
-            background-color: #1c1c1f;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        }
-
-        .profile-img {
-            width: 150px;
-            height: 150px;
-            object-fit: cover;
-            border-radius: 50%;
-            border: 4px solid #4CAF50;
-            margin-bottom: 20px;
-        }
-
-        h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
-            color: #ffffff;
-        }
-
-        p {
-            font-size: 16px;
-            color: #b0b0b0;
-            line-height: 1.5;
-            margin-bottom: 30px;
-        }
-
-        .btn-play-red {
-            display: block;
-            width: 100%;
-            padding: 18px;
-            background-color: #e74c3c;
-            color: #ffffff;
-            text-decoration: none;
-            border-radius: 12px;
-            font-size: 20px;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 25px; 
-            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
-            transition: all 0.3s ease;
-            border: 2px solid #c0392b;
-        }
-        .btn-play-red:hover {
-            background-color: #c0392b;
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(231, 76, 60, 0.6);
-        }
-
-        .links-container {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .link-btn {
-            display: block;
-            width: 100%;
-            padding: 15px;
-            background-color: #2a2a2e;
-            color: #ffffff;
-            text-decoration: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            border: 1px solid #3a3a40;
-        }
-        .link-btn:hover {
-            background-color: #4CAF50;
-            color: #ffffff;
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
-            border-color: #4CAF50;
-        }
-    </style>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.googletagmanager.com; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com; img-src 'self' data: blob: https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <title>Hours of Birds</title>
+    <link rel="icon" href="1.jpg">
+    <link rel="stylesheet" href="forest.css">
+    <link rel="stylesheet" href="home-layout.css">
+    <script src="analytics.js" defer></script>
+    <script type="module" src="site.js"></script>
 </head>
-<body>
-
-    <div class="language-switch">
-        <button class="lang-btn" id="btn-ru" data-site-language="ru">RU</button>
-        <span style="color: #555;"> | </span>
-        <button class="lang-btn" id="btn-en" data-site-language="en">EN</button>
-    </div>
-
-    <div class="container">
-        <img src="1.jpg" alt="Profile Picture" class="profile-img">
-
-        <h1 id="title">Hours of Birds</h1>
-        <p id="description">woW! Основной сайт всё ещё в разработке. Но вы уже можете поиграть в игру или посетить официальные соцсети проекта!</p>
-
-        <div class="links-container">
-            <a href="/games/bird_feeder/" class="btn-play-red" id="btn-game">
-    🎮 Игра «Покорми Птиц!»
-</a>
-
-            <a href="https://youtube.com/@hoursofbirds" target="_blank" rel="noopener noreferrer" class="link-btn">YouTube</a>
-            <a href="https://t.me/HoursOfBirds" target="_blank" rel="noopener noreferrer" class="link-btn">Telegram</a>
-            <a href="https://pikabu.ru/@HoursOfBirds" target="_blank" rel="noopener noreferrer" class="link-btn">Pikabu</a>
-            <a href="https://www.reddit.com/u/HoursOfBirds" target="_blank" rel="noopener noreferrer" class="link-btn">Reddit</a>
+<body data-mode="normal" data-phase="loading">
+    <div id="forest" aria-label="Ночной лес"></div>
+    <div id="arcade-screen" hidden></div>
+    <div class="corner-controls">
+        <button id="toggle-panel" type="button" aria-expanded="true" aria-controls="main-panel" data-text="hide">Скрыть</button>
+        <div class="mode-switch" role="group" aria-label="Режим сайта">
+            <button type="button" data-mode="creative" aria-pressed="false" data-text="creative">Творческий</button>
+            <button type="button" data-mode="normal" aria-pressed="true" data-text="normal">Обычный</button>
         </div>
     </div>
-
-    <script src="site.js" defer></script>
+    <div class="language-switch" role="group" aria-label="Язык">
+        <button type="button" data-site-language="ru" aria-pressed="true">RU</button>
+        <button type="button" data-site-language="en" aria-pressed="false">EN</button>
+    </div>
+    <header class="site-header" id="main-panel">
+        <a class="brand" href="./"><img src="1.jpg" alt=""><h1>Hours of Birds</h1></a>
+        <p class="description" data-text="description"></p>
+        <nav class="primary-nav" aria-label="Главное меню">
+            <a class="play-link" id="btn-game" href="games/bird_feeder/" data-text="play">Играть</a>
+            <a href="https://youtube.com/@hoursofbirds" target="_blank" rel="noopener noreferrer">YouTube</a>
+            <a href="https://t.me/HoursOfBirds" target="_blank" rel="noopener noreferrer">Telegram</a>
+            <a href="https://pikabu.ru/@HoursOfBirds" target="_blank" rel="noopener noreferrer">Pikabu</a>
+            <a href="https://www.reddit.com/u/HoursOfBirds" target="_blank" rel="noopener noreferrer">Reddit</a>
+        </nav>
+        <div class="home-audio">
+            <button type="button" id="music-toggle" aria-pressed="true"></button>
+            <button type="button" id="sounds-toggle" aria-pressed="true"></button>
+            <button type="button" id="volume-open" data-text="volume">Громкость</button>
+        </div>
+    </header>
+    <dialog id="volume-dialog" aria-labelledby="volume-title">
+        <h2 id="volume-title" data-text="volumeTitle">Настройка громкости</h2>
+        <label><span data-text="music">Музыка</span><input id="music-volume" type="range" min="0" max="100" value="34"><output for="music-volume">34%</output></label>
+        <label><span data-text="sounds">Звуки</span><input id="sounds-volume" type="range" min="0" max="100" value="69"><output for="sounds-volume">69%</output></label>
+        <button type="button" id="volume-close" data-text="close">Закрыть</button>
+    </dialog>
+    <div class="scene-status" id="scene-status" role="status">
+        <span id="status-text">Загрузка леса…</span>
+        <progress id="scene-progress" max="4" value="0" aria-label="Загрузка леса"></progress>
+        <button type="button" id="retry-scene" hidden data-text="retry">Повторить</button>
+    </div>
+    <button class="return-button" id="return-forest" type="button" hidden data-text="cancel">Отмена</button>
+    <noscript><div class="fallback"><p>Для 3D-сцены нужен JavaScript.</p><a class="play-link" href="games/bird_feeder/">Покорми птиц</a></div></noscript>
 </body>
 </html>

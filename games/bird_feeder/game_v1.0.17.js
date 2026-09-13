@@ -8,7 +8,19 @@
 
     function resizeContainer() {
         const wrapper = document.getElementById('app-wrapper');
-        const scale = Math.min(window.innerWidth / 1350, window.innerHeight / 880, 1.5);
+        const board = document.getElementById('game-container');
+        if (document.body.classList.contains('cabinet-game')) {
+            // Adapt the board height to the cabinet; keep sprites and controls
+            // uniformly scaled instead of stretching the entire game vertically.
+            const scale = window.innerWidth / 1336;
+            const bottomHeight = document.getElementById('ui-bottom').offsetHeight;
+            board.style.height = `${window.innerHeight / scale - bottomHeight}px`;
+            wrapper.style.transform = `scale(${scale})`;
+            return;
+        }
+        board.style.height = '';
+        const navHeight = document.body.classList.contains('standalone-game') ? parseFloat(getComputedStyle(document.body).getPropertyValue('--site-nav-height')) || 60 : 0;
+        const scale = Math.min(window.innerWidth / 1350, (window.innerHeight - navHeight) / Math.max(880, wrapper.offsetHeight + 12), 1.5);
         wrapper.style.transform = `scale(${scale})`;
     }
     window.addEventListener('resize', resizeContainer);
@@ -98,6 +110,11 @@
         } finally {
             initAudioPool();
             isAssetsLoaded = true;
+            if (savedRun) {
+                savedRun.food.forEach(item => addFood(item.type, item));
+                savedRun = null;
+            }
+            updateUI();
             applyLocalization();
             startGameLoops();
         }
@@ -216,6 +233,16 @@
     }
 
     let score = 0;
+    const RUN_KEY = 'birdCurrentRunV1';
+    let savedRun = null;
+    try {
+        const stored = JSON.parse(sessionStorage.getItem(RUN_KEY) || 'null');
+        if (stored && typeof stored.data === 'string' && stored.hash === makeChecksum(stored.data)) {
+            const run = JSON.parse(stored.data);
+            if (Number.isSafeInteger(run.score) && Math.abs(run.score) <= 10000000 && Array.isArray(run.food) && run.food.length <= 10 && run.food.every(item => ['seeds', 'meat'].includes(item.type) && Number.isFinite(item.x) && item.x >= 0 && item.x <= 1336 && Number.isFinite(item.y) && item.y >= -50 && item.y <= 768)) savedRun = run;
+        }
+    } catch { /* Invalid session data must never prevent playing. */ }
+    if (savedRun) score = savedRun.score;
     let highScore = secureLoad('birdHighScore', 0);
     let fedBirdsCount = secureLoad('birdFedCount', 0);
     let sunCoins = secureLoad('birdSunCoins', 0);
@@ -241,6 +268,16 @@
         if (el) el.textContent = text;
     }
 
+    function saveRun() {
+        // Store vertical positions in the original 768px coordinate space so
+        // a taller cabinet viewport can resume on the ordinary game page.
+        const boardHeight = document.getElementById('game-container').offsetHeight;
+        const data = JSON.stringify({ score, food: foodOnTable.map(({ type, element }) => ({ type, x: parseFloat(element.style.left), y: parseFloat(element.style.top) * 768 / boardHeight })) });
+        try { sessionStorage.setItem(RUN_KEY, JSON.stringify({ data, hash: makeChecksum(data) })); } catch { /* Storage may be unavailable. */ }
+    }
+    window.addEventListener('save-game-session', saveRun);
+    window.addEventListener('pagehide', saveRun);
+
     function applyLocalization() {
         let lang = currentLangMode;
         if (lang === 'auto') {
@@ -250,6 +287,7 @@
         
         const dict = GAME_TEXTS[lang];
         if (!dict) return;
+        document.documentElement.lang = lang;
 
         let playText = isAssetsLoaded ? (isPaused ? dict.btn_play : dict.btn_pause) : dict.btn_loading;
         let mainPlayText = isAssetsLoaded ? dict.btn_play : dict.btn_loading;
@@ -511,7 +549,7 @@
         snd.play().catch(e => console.log('SFX block/missing:', e));
     }
 
-    function addFood(type) {
+    function addFood(type, restored = null) {
         if (!FOOD_TYPES.has(type) || foodOnTable.length >= MAX_FOOD) return;
         const foodDiv = document.createElement('div');
         foodDiv.className = `food-item`;
@@ -529,18 +567,21 @@
         const randomX = tableZone.offsetLeft + Math.random() * (tableZone.offsetWidth - foodSize);
         const targetY = tableZone.offsetTop + Math.random() * (tableZone.offsetHeight - foodSize);
 
-        foodDiv.style.left = `${randomX}px`;
-        foodDiv.style.top = `-50px`; 
+        foodDiv.style.left = `${restored ? restored.x : randomX}px`;
+        foodDiv.style.top = restored ? `${restored.y * container.offsetHeight / 768}px` : '-50px';
         
         container.appendChild(foodDiv);
         foodOnTable.push({ type: type, element: foodDiv });
         updateUI();
 
-        setTimeout(() => { foodDiv.style.top = `${targetY}px`; }, 50);
-        setTimeout(() => { playSfx(type); }, 550);
+        if (!restored) {
+            setTimeout(() => { foodDiv.style.top = `${targetY}px`; saveRun(); }, 50);
+            setTimeout(() => { playSfx(type); }, 550);
+        }
     }
 
     function updateUI() {
+        saveRun();
         document.getElementById('food-count').innerText = foodOnTable.length;
         document.getElementById('score').innerText = score;
         if (score > highScore) {

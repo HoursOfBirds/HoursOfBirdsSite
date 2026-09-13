@@ -1,0 +1,37 @@
+{
+  "name": "HOB_D_ARCADE",
+  "version": 5,
+  "chunks": [
+    {
+      "id": "A",
+      "file": "d_arcade_chunk_a.glb",
+      "objects": 109,
+      "size_kb": 3946.0
+    },
+    {
+      "id": "B",
+      "file": "d_arcade_chunk_b.glb",
+      "objects": 109,
+      "size_kb": 3960.8
+    },
+    {
+      "id": "C",
+      "file": "d_arcade_chunk_c.glb",
+      "objects": 109,
+      "size_kb": 3948.8
+    },
+    {
+      "id": "GAMES",
+      "file": "d_arcade_chunk_games.glb",
+      "objects": 308,
+      "size_kb": 8553.4
+    }
+  ],
+  "loop": [
+    "A",
+    "B",
+    "C"
+  ],
+  "play_chunk": "GAMES",
+  "notes": "Infinite flight uses A/B/C. Play transition uses GAMES (machine + B behind)."
+}

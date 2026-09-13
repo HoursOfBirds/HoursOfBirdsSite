@@ -1,0 +1,47 @@
+/* Central card follows the original homepage; only the backdrop is feathered. */
+body { min-height: 100svh; }
+.site-header { position: relative; isolation: isolate; display: block; width: min(410px, calc(100% - 40px)); margin: 0 auto 36px; padding: 30px 36px 26px; border: 0; background: none; text-align: center; }
+.site-header::before { content: ''; position: absolute; z-index: -1; inset: -18px -30px; background: rgba(22,25,27,.66); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); mask-image: linear-gradient(to right, transparent, black 14%, black 86%, transparent), linear-gradient(to bottom, transparent, black 5%, black 95%, transparent); mask-composite: intersect; pointer-events: none; }
+.brand { flex-direction: column; gap: 18px; }
+.brand img { width: 112px; height: 112px; border: 3px solid #69b575; }
+.brand h1 { font-size: 26px; }
+.description { color: #c1c8c8; font-size: 14px; line-height: 1.55; margin: 12px 0 24px; }
+.primary-nav { display: flex; flex-direction: column; gap: 12px; overflow: visible; }
+.primary-nav a { width: 100%; padding: 13px 12px; background: #292d30cf; border: 1px solid #ffffff15; border-radius: 9px; color: #f5f5f5; font-weight: 600; font-size: 14px; }
+.primary-nav a:hover { background: #386446e8; }
+.primary-nav .play-link { background: #e74c3c; border-color: #c94a3d; box-shadow: 0 3px 18px #df473f40; font-size: 17px; padding: 17px 8px; margin-bottom: 10px; }
+.primary-nav .play-link:hover { background: #cf4234; }
+.corner-controls { position: fixed; top: 16px; left: 16px; z-index: 8; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.corner-controls > button { padding: 9px 13px; border: 1px solid #ffffff24; border-radius: 5px; background: #111a16bd; color: white; }
+.language-switch { position: fixed; top: 18px; right: 16px; z-index: 8; background: #0d1310b0; border-radius: 5px; }
+.home-audio { display: flex; gap: 5px; margin-top: 22px; }
+.home-audio button { flex: 1; min-width: 0; padding: 10px 3px; border-radius: 6px; border: 1px solid #ffffff26; background: #1d2627c9; color: #c9d1cf; font-size: 12px; }
+.home-audio button[aria-pressed=true] { color: #b5e4b9; border-color: #67a37188; }
+#volume-dialog { color: white; width: min(470px, calc(100% - 32px)); border: 1px solid #547660; border-radius: 14px; padding: 28px; background: #171e1deb; box-shadow: 0 16px 80px #0009; backdrop-filter: blur(18px); }
+#volume-dialog::backdrop { background: #0008; backdrop-filter: blur(4px); }
+#volume-dialog h2 { font-size: 23px; margin: 0 0 24px; text-align: center; }
+#volume-dialog label { display: flex; align-items: center; gap: 12px; margin: 18px 0; padding: 12px; background: #ffffff09; border-radius: 8px; }
+#volume-dialog label span { width: 68px; }
+#volume-dialog input { min-width: 50px; flex: 1; accent-color: #70b57b; }
+#volume-dialog output { width: 40px; text-align: right; font-size: 13px; }
+#volume-close { display: block; margin: 24px auto 0; padding: 10px 35px; border: 0; border-radius: 6px; background: #448a51; color: white; }
+body[data-phase=arcade] #toggle-panel, body[data-phase=flight] .corner-controls, body[data-phase=flight] .language-switch { display: none; }
+body[data-phase=arcade] { overflow: hidden; }
+/* Keep the exact iframe node alive in both modes: no reparenting/reloading. */
+body[data-phase=arcade][data-mode=normal] #arcade-screen div { transform: none !important; perspective: none !important; }
+body[data-phase=arcade][data-mode=normal] #arcade-screen .screen-content { position: fixed !important; inset: 66px 0 0 !important; width: 100% !important; height: calc(100% - 66px) !important; }
+body[data-phase=arcade][data-mode=normal] #forest { visibility: hidden; }
+.scene-status { z-index: 9; }
+@media(max-width: 600px) {
+  .corner-controls { top: 10px; left: 10px; gap: 6px; max-width: calc(100% - 82px); }
+  .corner-controls .mode-switch button { font-size: 12px; padding: 6px; }
+  .language-switch { right: 8px; top: 12px; }
+  .language-switch button { padding: 6px; }
+  .site-header { margin-top: 0; padding: 90px 16px 24px; width: min(370px, calc(100% - 28px)); }
+  .brand img { width: 88px; height: 88px; }
+  .brand h1 { font-size: 23px; }
+  .primary-nav a { font-size: 14px; padding: 12px; }
+  .site-header::before { inset: -12px -10px; }
+  #volume-dialog { padding: 20px 12px; }
+}
+@media(max-height: 650px) and (min-width: 700px) { .site-header { margin-top: 0; padding-top: 18px; } .brand img { width: 66px; height: 66px; } .primary-nav { gap: 7px; } .primary-nav a { padding: 9px; } .description { margin: 10px 0 16px; } }

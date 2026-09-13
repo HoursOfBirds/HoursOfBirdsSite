@@ -131,6 +131,9 @@ function createConsentSettingsButton() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // The homepage owns consent UI while the game is displayed inside its
+    // cabinet. Do not place a second fixed banner inside the CSS3D screen.
+    if (new URLSearchParams(location.search).get('arcade') === '1') return;
     const consent = localStorage.getItem(CONSENT_KEY);
     if (consent === 'true') injectGoogleAnalytics();
     else if (consent !== 'false') showConsentBanner();

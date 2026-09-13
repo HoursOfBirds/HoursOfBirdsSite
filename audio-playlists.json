@@ -1,0 +1,9 @@
+﻿{
+    "music":  [
+                  "MusicOST/Hours Of Birds OST - вторник.mp3",
+                  "MusicOST/Hours Of Birds OST - Понедельник.mp3"
+              ],
+    "sounds":  [
+                   "SoundsSite/nature.ogg"
+               ]
+}

@@ -1,11 +1,11 @@
-<!-- Файл: index.html | Игра: Покорми Птиц! | Версия: 1.0.17 -->
+<!-- Файл: index.html | Игра: Покорми Птиц! | Версия: 1.0.18 -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.googletagmanager.com; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com; img-src 'self' data: blob: https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
-    <title>Покорми Птиц! V1.0.17</title>
+    <title>Покорми Птиц! V1.0.18</title>
     
     <!-- Подключаем скрипт куки и аналитики из корня сайта (2 шага назад) -->
     <script src="../../analytics.js"></script>
@@ -56,9 +56,10 @@
                 <button class="menu-btn" id="txt-menu-lore" data-action="open-menu" data-menu="menu-lore">📖 Лор игры</button>
                 <button class="menu-btn" id="txt-menu-socials" data-action="open-menu" data-menu="menu-socials">📱 Соцсети разработчика</button>
                 <button class="menu-btn" id="txt-menu-bugs" data-action="open-menu" data-menu="menu-bugs">🐛 Сообщить об ошибке</button>
+                <button class="menu-btn exit-menu-btn" id="exit-game" type="button">Выйти из игры</button>
                 
                 <!-- Версия игры -->
-                <div class="game-version">V1.0.17</div>
+                <div class="game-version">V1.0.18</div>
             </div>
 
             <!-- 2. Выбор языка -->
@@ -162,5 +163,6 @@
     
     <!-- Логика Игры: античит, RAM-кэш, музыка и SFX из оперативной памяти -->
     <script src="game_v1.0.17.js"></script>
+    <script type="module" src="game-experience.js"></script>
 </body>
 </html>
