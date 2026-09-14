@@ -1,6 +1,8 @@
 import { getMode, setMode, readPreference } from '../../experience.js';
 
-const embedded = new URLSearchParams(location.search).get('arcade') === '1';
+// A query string alone must not turn a standalone page into an embedded game.
+// The real arcade screen is an iframe, while a direct visit has parent === window.
+const embedded = window.parent !== window && new URLSearchParams(location.search).get('arcade') === '1';
 const playButton = document.getElementById('txt-play-main');
 let siteLanguage = readPreference('siteLang', navigator.language.startsWith('ru') ? 'ru' : 'en');
 let translateControls = () => {};
@@ -13,30 +15,30 @@ exit.addEventListener('click', () => {
     else location.assign('../../');
 });
 
-function autoStart() {
+function announceReady() {
     if (!playButton) return;
     // The game script keeps this button disabled until every image is ready.
-    // Use the existing start handler after DOMContentLoaded registered it.
-    const start = () => {
+    // Notify the cabinet without pressing Play: the menu must remain visible
+    // until the visitor explicitly starts the game.
+    const announce = () => {
         if (!playButton.disabled) {
-            playButton.click();
             if (embedded) parent.postMessage({ type: 'game-ready' }, location.origin);
             return true;
         }
         return false;
     };
-    if (!start()) {
+    if (!announce()) {
         const observer = new MutationObserver(() => {
-            if (start()) observer.disconnect();
+            if (announce()) observer.disconnect();
         });
         observer.observe(playButton, { attributes: true, attributeFilter: ['disabled'] });
         window.addEventListener('pagehide', () => observer.disconnect(), { once: true });
     }
 }
 
-if (embedded || new URLSearchParams(location.search).get('play') === '1') {
-    if (document.readyState === 'complete') autoStart();
-    else window.addEventListener('DOMContentLoaded', autoStart, { once: true });
+if (embedded) {
+    if (document.readyState === 'complete') announceReady();
+    else window.addEventListener('DOMContentLoaded', announceReady, { once: true });
 }
 
 if (embedded) {
@@ -62,8 +64,16 @@ if (embedded) {
     controls.className = 'site-game-controls';
     const english = readPreference('siteLang', navigator.language.startsWith('ru') ? 'ru' : 'en') === 'en';
     controls.setAttribute('aria-label', english ? 'Site navigation' : 'Навигация сайта');
-    controls.innerHTML = '<div role="group"><button type="button" data-mode="creative"></button><button type="button" data-mode="normal"></button></div>';
-    controls.querySelector('div').setAttribute('aria-label', english ? 'Site mode' : 'Режим сайта');
+    const modeGroup = document.createElement('div');
+    modeGroup.setAttribute('role', 'group');
+    modeGroup.setAttribute('aria-label', english ? 'Site mode' : 'Режим сайта');
+    for (const mode of ['creative', 'normal']) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.mode = mode;
+        modeGroup.appendChild(button);
+    }
+    controls.appendChild(modeGroup);
     document.body.append(controls);
     document.body.classList.add('standalone-game');
     const buttons = controls.querySelectorAll('button');

@@ -5,6 +5,79 @@
     let gameLoopsStarted = false;
     let landingLoopTimer = null;
     let flybyLoopTimer = null;
+    let foodOnTable = [];
+
+    const BACKGROUND_SIZE = { width: 1366, height: 768 };
+    const TABLE_SURFACE = {
+        topLeft: { x: 345, y: 582 },
+        topRight: { x: 1070, y: 558 },
+        bottomLeft: { x: 245, y: 700 },
+        bottomRight: { x: 1115, y: 692 }
+    };
+
+    function lerp(a, b, amount) {
+        return a + (b - a) * amount;
+    }
+
+    function getBackgroundProjection() {
+        const board = document.getElementById('game-container');
+        const width = board.clientWidth;
+        const height = board.clientHeight;
+        const scale = Math.max(width / BACKGROUND_SIZE.width, height / BACKGROUND_SIZE.height);
+        return {
+            scale,
+            offsetX: (width - BACKGROUND_SIZE.width * scale) / 2,
+            offsetY: (height - BACKGROUND_SIZE.height * scale) / 2
+        };
+    }
+
+    function projectBackgroundPoint(point) {
+        const projection = getBackgroundProjection();
+        return {
+            x: projection.offsetX + point.x * projection.scale,
+            y: projection.offsetY + point.y * projection.scale
+        };
+    }
+
+    function randomTablePoint(margin = 0) {
+        // Bilinear sampling follows the perspective edges of the tabletop.
+        // Keep objects away from the vegetation-covered front corners.
+        const depth = .08 + Math.random() * .72;
+        const left = {
+            x: lerp(TABLE_SURFACE.topLeft.x, TABLE_SURFACE.bottomLeft.x, depth),
+            y: lerp(TABLE_SURFACE.topLeft.y, TABLE_SURFACE.bottomLeft.y, depth)
+        };
+        const right = {
+            x: lerp(TABLE_SURFACE.topRight.x, TABLE_SURFACE.bottomRight.x, depth),
+            y: lerp(TABLE_SURFACE.topRight.y, TABLE_SURFACE.bottomRight.y, depth)
+        };
+        const usableWidth = Math.max(1, right.x - left.x - margin * 2);
+        const across = (margin + Math.random() * usableWidth) / (right.x - left.x);
+        return {
+            x: lerp(left.x, right.x, across),
+            y: lerp(left.y, right.y, across)
+        };
+    }
+
+    function positionFoodElement(item, animate = false) {
+        const point = projectBackgroundPoint({ x: item.x, y: item.y });
+        const width = item.element.offsetWidth || 40;
+        const height = item.element.offsetHeight || 40;
+        if (!animate) item.element.style.transition = 'none';
+        item.element.style.left = `${point.x - width / 2}px`;
+        item.element.style.top = `${point.y - height / 2}px`;
+        if (!animate) requestAnimationFrame(() => item.element.style.removeProperty('transition'));
+    }
+
+    function syncTableObjects() {
+        foodOnTable.forEach(item => positionFoodElement(item));
+        document.querySelectorAll('.bird[data-table-x][data-table-y]').forEach(bird => {
+            const point = projectBackgroundPoint({ x: Number(bird.dataset.tableX), y: Number(bird.dataset.tableY) });
+            const size = bird.offsetWidth;
+            bird.style.left = `${point.x - size / 2}px`;
+            bird.style.top = `${point.y - size}px`;
+        });
+    }
 
     function resizeContainer() {
         const wrapper = document.getElementById('app-wrapper');
@@ -16,12 +89,14 @@
             const bottomHeight = document.getElementById('ui-bottom').offsetHeight;
             board.style.height = `${window.innerHeight / scale - bottomHeight}px`;
             wrapper.style.transform = `scale(${scale})`;
+            requestAnimationFrame(syncTableObjects);
             return;
         }
         board.style.height = '';
         const navHeight = document.body.classList.contains('standalone-game') ? parseFloat(getComputedStyle(document.body).getPropertyValue('--site-nav-height')) || 60 : 0;
         const scale = Math.min(window.innerWidth / 1350, (window.innerHeight - navHeight) / Math.max(880, wrapper.offsetHeight + 12), 1.5);
         wrapper.style.transform = `scale(${scale})`;
+        requestAnimationFrame(syncTableObjects);
     }
     window.addEventListener('resize', resizeContainer);
     resizeContainer();
@@ -69,7 +144,7 @@
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 return await response.blob();
             } catch (e) {
-                if (i === retries - 1) throw e;
+                if (i === attempts - 1) throw e;
                 console.warn(`[ОЗУ] Сбой скачивания ${url}. Попытка ${i + 2} из ${attempts}...`);
                 await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
             } finally {
@@ -128,12 +203,12 @@
     function initAudioPool() {
         musicAudio = new Audio('audio/music.ogg');
         musicAudio.loop = true;
-        musicAudio.volume = 0.34;
+        musicAudio.volume = 0.13;
         musicAudio.preload = 'metadata';
 
         natureAudio = new Audio('audio/nature.ogg');
         natureAudio.loop = true;
-        natureAudio.volume = 0.69;
+        natureAudio.volume = 0.33;
         natureAudio.preload = 'metadata';
 
         // Подхватываем звуки
@@ -157,6 +232,33 @@
     // полноценным античитом: при серверной валюте и наградах проверка должна
     // переехать на сервер.
     const SAVE_SECRET_KEY = 'birdSaveSecret';
+    const fallbackStorage = new Map();
+
+    function storageKey(storageName, key) {
+        return `${storageName}:${key}`;
+    }
+
+    function readStorage(storageName, key) {
+        try { return window[storageName].getItem(key); }
+        catch { return fallbackStorage.get(storageKey(storageName, key)) ?? null; }
+    }
+
+    function writeStorage(storageName, key, value) {
+        try {
+            window[storageName].setItem(key, value);
+            return true;
+        } catch {
+            fallbackStorage.set(storageKey(storageName, key), String(value));
+            return false;
+        }
+    }
+
+    function removeStorage(storageName, key) {
+        try { window[storageName].removeItem(key); }
+        catch { /* Storage may be disabled. */ }
+        fallbackStorage.delete(storageKey(storageName, key));
+    }
+
     const SAVE_LIMITS = {
         birdHighScore: 10_000_000,
         birdFedCount: 99,
@@ -164,13 +266,14 @@
     };
 
     function getSaveSecret() {
-        const existing = localStorage.getItem(SAVE_SECRET_KEY);
+        const existing = readStorage('localStorage', SAVE_SECRET_KEY);
         if (existing && /^[a-f0-9]{16}$/i.test(existing)) return existing;
 
         const bytes = new Uint32Array(2);
-        crypto.getRandomValues(bytes);
+        try { crypto.getRandomValues(bytes); }
+        catch { bytes[0] = Date.now() >>> 0; bytes[1] = Math.floor(Math.random() * 0xffffffff) >>> 0; }
         const secret = Array.from(bytes, value => value.toString(16).padStart(8, '0')).join('');
-        localStorage.setItem(SAVE_SECRET_KEY, secret);
+        writeStorage('localStorage', SAVE_SECRET_KEY, secret);
         return secret;
     }
 
@@ -202,8 +305,8 @@
     function secureSave(key, value) {
         const normalized = normalizeSaveValue(key, value);
         if (normalized === null) return false;
-        localStorage.setItem(key, String(normalized));
-        localStorage.setItem(`${key}_hash`, makeChecksum(normalized));
+        writeStorage('localStorage', key, String(normalized));
+        writeStorage('localStorage', `${key}_hash`, makeChecksum(normalized));
         return true;
     }
 
@@ -214,8 +317,8 @@
     }
 
     function secureLoad(key, defaultVal) {
-        const rawValue = localStorage.getItem(key);
-        const checksum = localStorage.getItem(`${key}_hash`);
+        const rawValue = readStorage('localStorage', key);
+        const checksum = readStorage('localStorage', `${key}_hash`);
         if (rawValue === null) return defaultVal;
 
         const value = normalizeSaveValue(key, rawValue);
@@ -236,10 +339,23 @@
     const RUN_KEY = 'birdCurrentRunV1';
     let savedRun = null;
     try {
-        const stored = JSON.parse(sessionStorage.getItem(RUN_KEY) || 'null');
-        if (stored && typeof stored.data === 'string' && stored.hash === makeChecksum(stored.data)) {
+        const storedRaw = readStorage('sessionStorage', RUN_KEY);
+        const stored = typeof storedRaw === 'string' && storedRaw.length <= 16384 ? JSON.parse(storedRaw) : null;
+        if (stored && typeof stored.data === 'string' && stored.data.length <= 8192 && stored.hash === makeChecksum(stored.data)) {
             const run = JSON.parse(stored.data);
-            if (Number.isSafeInteger(run.score) && Math.abs(run.score) <= 10000000 && Array.isArray(run.food) && run.food.length <= 10 && run.food.every(item => ['seeds', 'meat'].includes(item.type) && Number.isFinite(item.x) && item.x >= 0 && item.x <= 1336 && Number.isFinite(item.y) && item.y >= -50 && item.y <= 768)) savedRun = run;
+            if (Number.isSafeInteger(run.score) && Math.abs(run.score) <= 10000000 && Array.isArray(run.food) && run.food.length <= 10 && run.food.every(item => ['seeds', 'meat'].includes(item.type) && Number.isFinite(item.x) && item.x >= 0 && item.x <= BACKGROUND_SIZE.width && Number.isFinite(item.y) && item.y >= -50 && item.y <= BACKGROUND_SIZE.height)) {
+                if (run.coordinateSpace !== 'background-v2') {
+                    // Older saves used the 1336px board coordinates. Preserve
+                    // their food approximately, then rewrite in the stable
+                    // background coordinate space on the next UI update.
+                    run.food = run.food.map(item => ({
+                        ...item,
+                        x: Math.max(275, Math.min(1090, item.x + 15)),
+                        y: Math.max(575, Math.min(690, item.y))
+                    }));
+                }
+                savedRun = run;
+            }
         }
     } catch { /* Invalid session data must never prevent playing. */ }
     if (savedRun) score = savedRun.score;
@@ -247,20 +363,19 @@
     let fedBirdsCount = secureLoad('birdFedCount', 0);
     let sunCoins = secureLoad('birdSunCoins', 0);
     
-    let foodOnTable = [];
     const MAX_FOOD = 10;
     const FOOD_TYPES = new Set(['seeds', 'meat']);
     document.getElementById('high-score').innerText = highScore;
 
     let isPaused = true; 
     let sfxEnabled = true;
-    let sfxVolume = 1.0;
+    let sfxVolume = 0.55;
     let adsEnabled = false;
 
     const menus = ['menu-main', 'menu-settings', 'menu-language', 'menu-ads', 'menu-lore', 'menu-ad-alert', 'menu-bugs', 'menu-socials'];
 
     const LANGUAGE_MODES = new Set(['auto', 'ru', 'en']);
-    const savedLanguage = localStorage.getItem('siteLang');
+    const savedLanguage = readStorage('localStorage', 'siteLang');
     let currentLangMode = LANGUAGE_MODES.has(savedLanguage) ? savedLanguage : 'auto';
 
     function setText(id, text) {
@@ -269,11 +384,11 @@
     }
 
     function saveRun() {
-        // Store vertical positions in the original 768px coordinate space so
-        // a taller cabinet viewport can resume on the ordinary game page.
-        const boardHeight = document.getElementById('game-container').offsetHeight;
-        const data = JSON.stringify({ score, food: foodOnTable.map(({ type, element }) => ({ type, x: parseFloat(element.style.left), y: parseFloat(element.style.top) * 768 / boardHeight })) });
-        try { sessionStorage.setItem(RUN_KEY, JSON.stringify({ data, hash: makeChecksum(data) })); } catch { /* Storage may be unavailable. */ }
+        const food = foodOnTable.map(({ type, x, y }) => ({ type, x, y }))
+            .filter(item => Number.isFinite(item.x) && Number.isFinite(item.y));
+        const data = JSON.stringify({ coordinateSpace: 'background-v2', score, food });
+        if (data.length > 8192) return;
+        writeStorage('sessionStorage', RUN_KEY, JSON.stringify({ data, hash: makeChecksum(data) }));
     }
     window.addEventListener('save-game-session', saveRun);
     window.addEventListener('pagehide', saveRun);
@@ -377,9 +492,9 @@
         if (!LANGUAGE_MODES.has(lang)) return;
         currentLangMode = lang;
         if (lang === 'auto') {
-            localStorage.removeItem('siteLang'); 
+            removeStorage('localStorage', 'siteLang');
         } else {
-            localStorage.setItem('siteLang', lang); 
+            writeStorage('localStorage', 'siteLang', lang);
         }
         
         updateLanguageButtons();
@@ -439,6 +554,13 @@
         } else if (control.dataset.volume === 'sfx') {
             changeSfxVolume(control.value);
         }
+        updateVolumeOutput(control.dataset.volume, control.value);
+    }
+
+    function updateVolumeOutput(channel, value) {
+        const percent = Math.round(Math.min(100, Math.max(0, Number(value) || 0)));
+        const output = document.querySelector(`[data-volume-output="${channel}"]`);
+        if (output) output.value = `${percent}%`;
     }
 
     function updateSunUI() {
@@ -448,6 +570,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('click', handleGameAction);
         document.addEventListener('input', handleVolumeInput);
+        document.querySelectorAll('input[data-volume]').forEach(control => updateVolumeOutput(control.dataset.volume, control.value));
         updateLanguageButtons();
         
         updateSunUI();
@@ -552,7 +675,7 @@
     function addFood(type, restored = null) {
         if (!FOOD_TYPES.has(type) || foodOnTable.length >= MAX_FOOD) return;
         const foodDiv = document.createElement('div');
-        foodDiv.className = `food-item`;
+        foodDiv.className = 'food-item';
         
         const isMeat = type === 'meat';
         const foodSize = isMeat ? 40 : 40;
@@ -561,21 +684,20 @@
         
         foodDiv.style.backgroundImage = `url('${memoryCache[`img/${type}.webp`] || `img/${type}.webp`}')`;
         
-        const tableZone = document.getElementById('table-zone');
         const container = document.getElementById('game-container');
-        
-        const randomX = tableZone.offsetLeft + Math.random() * (tableZone.offsetWidth - foodSize);
-        const targetY = tableZone.offsetTop + Math.random() * (tableZone.offsetHeight - foodSize);
+        const tablePoint = restored ? { x: restored.x, y: restored.y } : randomTablePoint(32);
+        const target = projectBackgroundPoint(tablePoint);
 
-        foodDiv.style.left = `${restored ? restored.x : randomX}px`;
-        foodDiv.style.top = restored ? `${restored.y * container.offsetHeight / 768}px` : '-50px';
+        foodDiv.style.left = `${target.x - foodSize / 2}px`;
+        foodDiv.style.top = restored ? `${target.y - foodSize / 2}px` : '-50px';
         
         container.appendChild(foodDiv);
-        foodOnTable.push({ type: type, element: foodDiv });
+        const foodItem = { type, element: foodDiv, x: tablePoint.x, y: tablePoint.y };
+        foodOnTable.push(foodItem);
         updateUI();
 
         if (!restored) {
-            setTimeout(() => { foodDiv.style.top = `${targetY}px`; saveRun(); }, 50);
+            setTimeout(() => { positionFoodElement(foodItem, true); saveRun(); }, 50);
             setTimeout(() => { playSfx(type); }, 550);
         }
     }
@@ -599,12 +721,12 @@
         updateUI(); 
     }
 
-    function getBirdCurrentX(birdEl) {
+    function getBirdCurrentCenterX(birdEl) {
         const container = document.getElementById('game-container');
         const birdRect = birdEl.getBoundingClientRect();
         const contRect = container.getBoundingClientRect();
-        const scale = contRect.width / 1336;
-        return (birdRect.left - contRect.left) / scale;
+        const scale = contRect.width / container.offsetWidth;
+        return (birdRect.left + birdRect.width / 2 - contRect.left) / scale;
     }
 
     function createBirdElement(birdData, startX, startY, targetX) {
@@ -630,16 +752,18 @@
     function sendToTable(birdEl, birdData) {
         if (birdEl.dataset.fled === 'true') return;
 
-        const tableZone = document.getElementById('table-zone');
         const birdSize = 100 * birdData.scale;
-
-        const targetX = tableZone.offsetLeft + Math.random() * (tableZone.offsetWidth - birdSize);
-        const targetY = tableZone.offsetTop + Math.random() * (tableZone.offsetHeight - 30) - (birdSize * 1);
+        const tablePoint = randomTablePoint(Math.min(120, birdSize * .45));
+        const target = projectBackgroundPoint(tablePoint);
+        const targetX = target.x - birdSize / 2;
+        const targetY = target.y - birdSize;
+        birdEl.dataset.tableX = String(tablePoint.x);
+        birdEl.dataset.tableY = String(tablePoint.y);
 
         birdEl.style.transition = 'top 2s linear, left 2s linear';
         
-        const currentX = getBirdCurrentX(birdEl);
-        birdEl.style.transform = targetX > currentX ? 'scaleX(-1)' : 'scaleX(1)';
+        const currentX = getBirdCurrentCenterX(birdEl);
+        birdEl.style.transform = target.x > currentX ? 'scaleX(-1)' : 'scaleX(1)';
 
         birdEl.style.left = `${targetX}px`;
         birdEl.style.top = `${targetY}px`;
@@ -658,6 +782,8 @@
 
     function approachFood(birdEl, birdData, birdSize) {
         if (birdEl.dataset.fled === 'true' || !document.body.contains(birdEl)) return;
+        delete birdEl.dataset.tableX;
+        delete birdEl.dataset.tableY;
 
         let targetFoodObj = null;
         let foodIndex = -1;
@@ -670,15 +796,15 @@
 
         if (foodIndex !== -1) {
             targetFoodObj = foodOnTable[foodIndex];
-            const foodLeft = parseFloat(targetFoodObj.element.style.left);
-            const foodTop = parseFloat(targetFoodObj.element.style.top);
+            const foodPoint = projectBackgroundPoint(targetFoodObj);
             
-            const currentX = getBirdCurrentX(birdEl);
+            const currentX = getBirdCurrentCenterX(birdEl);
             const offset = birdSize * 0.35;
-            const moveX = foodLeft > currentX ? foodLeft - offset : foodLeft + offset;
-            const moveY = foodTop - (birdSize - 30);
+            const moveCenterX = foodPoint.x > currentX ? foodPoint.x - offset : foodPoint.x + offset;
+            const moveX = moveCenterX - birdSize / 2;
+            const moveY = foodPoint.y - birdSize + 16;
 
-            birdEl.style.transform = moveX > currentX ? 'scaleX(-1)' : 'scaleX(1)';
+            birdEl.style.transform = moveCenterX > currentX ? 'scaleX(-1)' : 'scaleX(1)';
             birdEl.style.backgroundImage = `url('${memoryCache[`img/${birdData.images.fly}`] || `img/${birdData.images.fly}`}')`; 
             
             birdEl.style.transition = 'top 0.5s ease-in-out, left 0.5s ease-in-out';
@@ -723,9 +849,11 @@
 
     function flyAway(birdEl, birdData) {
         if (!document.body.contains(birdEl)) return;
+        delete birdEl.dataset.tableX;
+        delete birdEl.dataset.tableY;
         
         birdEl.style.backgroundImage = `url('${memoryCache[`img/${birdData.images.fly}`] || `img/${birdData.images.fly}`}')`;
-        const currentX = getBirdCurrentX(birdEl);
+        const currentX = getBirdCurrentCenterX(birdEl);
         const flyRight = currentX > 1336 / 2;
         birdEl.style.transform = flyRight ? 'scaleX(-1)' : 'scaleX(1)'; 
         
@@ -785,7 +913,7 @@
     function gameLoop() {
         landingLoopTimer = setTimeout(() => {
             if (!gameLoopsStarted) return;
-            spawnLandingBird();
+            if (!isPaused) spawnLandingBird();
             gameLoop();
         }, 3000 + Math.random() * 3000);
     }
@@ -793,7 +921,7 @@
     function flybyLoop() {
         flybyLoopTimer = setTimeout(() => {
             if (!gameLoopsStarted) return;
-            spawnFlybyBird();
+            if (!isPaused) spawnFlybyBird();
             flybyLoop();
         }, 5000 + Math.random() * 5000);
     }

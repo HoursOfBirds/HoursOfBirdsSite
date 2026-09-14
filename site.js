@@ -9,8 +9,10 @@ const storedLanguage = readPreference('siteLang', navigator.language.startsWith(
 let language = ['ru', 'en'].includes(storedLanguage) ? storedLanguage : 'ru';
 let mode = getMode();
 let forest;
-let state = 'loading';
+let state = 'idle';
 let frame;
+let forestLoad;
+let forestGeneration = 0;
 const gameUrl = new URL('games/bird_feeder/', location.href);
 const play = document.getElementById('btn-game');
 const status = document.getElementById('scene-status');
@@ -43,11 +45,17 @@ function translate() {
 }
 
 function syncMode() {
+    const previousMode = mode;
     mode = getMode();
     document.body.dataset.mode = mode;
     document.querySelectorAll('button[data-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mode === mode)));
     forest?.setMode(mode);
     play.setAttribute('aria-disabled', String(state === 'loading' && mode === 'creative'));
+    if (mode === 'creative' && !forest && state !== 'arcade') {
+        void ensureForest();
+    } else if (mode === 'normal' && previousMode === 'creative' && ['loading', 'forest', 'error'].includes(state)) {
+        cancelForestLoad();
+    }
     if (state === 'arcade') {
         if (mode === 'creative') forest?.showCabinet();
         frame?.contentWindow?.postMessage({ type: 'site-mode', mode }, location.origin);
@@ -63,7 +71,7 @@ function onState(next, done) {
     if (done !== undefined) progress.value = done;
     play.setAttribute('aria-disabled', String(next === 'loading' && mode === 'creative'));
     back.hidden = next !== 'flight';
-    audio.setActive(!['flight', 'arcade'].includes(next));
+    audio.setActive(!['flight', 'arcade'].includes(next), next === 'flight' ? 4000 : 0);
     if (next === 'forest' || next === 'error') {
         frame?.remove();
         frame = null;
@@ -73,12 +81,14 @@ function onState(next, done) {
 }
 
 function enterGame(selectedMode) {
+    if (frame || state !== 'arcade') return;
     // Both modes retain the same browsing context, so the live game never resets.
     const element = document.createElement('div');
     element.className = 'screen-content';
     frame = document.createElement('iframe');
     frame.title = texts[language].title;
     frame.setAttribute('allow', 'autoplay');
+    frame.referrerPolicy = 'same-origin';
     frame.src = `${gameUrl.href}?arcade=1`;
     element.append(frame);
     forest.mountGame(element);
@@ -86,27 +96,66 @@ function enterGame(selectedMode) {
     syncMode();
 }
 
-async function init() {
-    onState('loading', 0);
-    try {
-        const { Forest } = await import('./forest.js');
-        forest?.dispose();
-        forest = new Forest(document.getElementById('forest'), document.getElementById('arcade-screen'), onState, enterGame);
-        forest.setMode(mode);
-        await forest.load();
-        if (new URLSearchParams(location.search).get('resume') === '1') {
-            history.replaceState(null, '', location.pathname);
-            forest.resume();
-        } else if (new URLSearchParams(location.search).get('play') === '1') {
-            history.replaceState(null, '', location.pathname);
-            if (mode === 'normal') location.assign(`${gameUrl.href}?play=1`);
-            else forest.play();
-        }
-    } catch (error) {
-        console.error('Forest initialization failed:', error);
-        forest?.dispose();
+function cancelForestLoad() {
+    forestGeneration += 1;
+    forestLoad = null;
+    if (forest) {
+        forest.dispose();
         forest = null;
-        onState('error');
+    }
+    if (state !== 'idle') onState('idle');
+}
+
+async function ensureForest() {
+    if (forest) return forest;
+    if (forestLoad) return forestLoad;
+    const generation = ++forestGeneration;
+    onState('loading', 0);
+    forestLoad = (async () => {
+        let instance;
+        try {
+            const { Forest } = await import('./forest.js');
+            if (generation !== forestGeneration || mode !== 'creative') return null;
+            instance = new Forest(document.getElementById('forest'), document.getElementById('arcade-screen'), onState, enterGame);
+            forest = instance;
+            instance.setMode(mode);
+            await instance.load();
+            if (generation !== forestGeneration || mode !== 'creative' || instance.disposed) {
+                instance.dispose();
+                if (forest === instance) forest = null;
+                return null;
+            }
+            const params = new URLSearchParams(location.search);
+            if (params.get('resume') === '1') {
+                history.replaceState(null, '', location.pathname);
+                instance.resume();
+            } else if (params.get('play') === '1') {
+                history.replaceState(null, '', location.pathname);
+                instance.play();
+            }
+            return instance;
+        } catch (error) {
+            if (generation !== forestGeneration || mode !== 'creative') return null;
+            console.error('Forest initialization failed:', error);
+            instance?.dispose();
+            if (forest === instance) forest = null;
+            onState('error');
+            return null;
+        } finally {
+            if (generation === forestGeneration) forestLoad = null;
+        }
+    })();
+    return forestLoad;
+}
+
+function init() {
+    // Normal mode is intentionally lightweight: no Three.js import and no GLB
+    // requests until the visitor explicitly enables Creative mode.
+    if (mode === 'creative') void ensureForest();
+    const params = new URLSearchParams(location.search);
+    if (mode === 'normal' && params.get('play') === '1') {
+        history.replaceState(null, '', location.pathname);
+        location.assign(`${gameUrl.href}?play=1`);
     }
 }
 
@@ -117,7 +166,8 @@ play.addEventListener('click', event => {
         location.assign(`${gameUrl.href}?play=1`);
         return;
     }
-    forest?.play();
+    if (state === 'loading' || !forest) return;
+    forest.play();
 });
 document.querySelectorAll('button[data-mode]').forEach(button => button.addEventListener('click', () => setMode(button.dataset.mode)));
 document.querySelectorAll('[data-site-language]').forEach(button => button.addEventListener('click', () => {
@@ -134,7 +184,7 @@ window.addEventListener('message', event => {
 });
 window.addEventListener('site-mode', syncMode);
 window.addEventListener('storage', event => { if (event.key === 'siteMode') syncMode(); });
-window.addEventListener('pagehide', event => { if (!event.persisted) forest?.dispose(); });
+window.addEventListener('pagehide', event => { if (!event.persisted) { forestGeneration += 1; forest?.dispose(); } });
 window.addEventListener('pageshow', event => { if (event.persisted) { syncMode(); audio.sync(); } });
 retry.addEventListener('click', init);
 panelToggle.addEventListener('click', () => {

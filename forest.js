@@ -6,6 +6,12 @@ const ASSETS = new URL('./D_ARCADE_WEB_EXPORT_v5/', import.meta.url);
 const LENGTH = 70;
 const FLIGHT_SECONDS = 4;
 const CAMERA_HEIGHT = 2.4;
+const CHUNK_FILES = new Map([
+    ['A', 'd_arcade_chunk_a.glb'],
+    ['B', 'd_arcade_chunk_b.glb'],
+    ['C', 'd_arcade_chunk_c.glb'],
+    ['GAMES', 'd_arcade_chunk_games.glb']
+]);
 const ease = t => t * t * (3 - 2 * t);
 
 export class Forest {
@@ -16,6 +22,9 @@ export class Forest {
         this.onEnter = onEnter;
         this.state = 'loading';
         this.mode = 'normal';
+        const narrowScreen = matchMedia('(max-width: 700px)').matches;
+        const lowPowerHardware = (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4;
+        this.lowPower = narrowScreen || lowPowerHardware;
         this.slots = [];
         this.pointer = new THREE.Vector2();
         this.gaze = new THREE.Vector2();
@@ -24,15 +33,21 @@ export class Forest {
         this.scene.fog = new THREE.Fog(0x040506, 42, 88);
         this.camera = new THREE.PerspectiveCamera(58, 1, .025, 250);
         this.camera.position.set(0, CAMERA_HEIGHT, -10);
-        this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+        this.renderer = new THREE.WebGLRenderer({
+            antialias: !this.lowPower,
+            powerPreference: 'low-power',
+            precision: this.lowPower ? 'mediump' : 'highp'
+        });
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = .94;
         this.renderer.domElement.setAttribute('aria-label', 'Hours of Birds: forest');
         host.append(this.renderer.domElement);
         this.scene.add(new THREE.HemisphereLight(0x8397b0, 0x382017, .16));
-        // A fixed light pool avoids shader recompilation when chunks are recycled.
-        this.lights = Array.from({ length: 28 }, () => {
+        // Point lights are among the most expensive parts of this scene on
+        // mobile GPUs. Keep a nearest-lamp pool instead of creating one light
+        // for every exported lantern.
+        this.lights = Array.from({ length: this.lowPower ? 12 : 18 }, () => {
             const light = new THREE.PointLight(0xff7a30, 0, 19, 2);
             this.scene.add(light);
             return light;
@@ -77,6 +92,17 @@ export class Forest {
             if (!response.ok) throw new Error('Manifest unavailable');
             return response.json();
         });
+        if (!manifest || !Array.isArray(manifest.chunks) || manifest.chunks.length !== CHUNK_FILES.size) {
+            throw new Error('Invalid forest manifest');
+        }
+        const definitions = new Map();
+        for (const definition of manifest.chunks) {
+            if (!definition || typeof definition.id !== 'string' || typeof definition.file !== 'string' || CHUNK_FILES.get(definition.id) !== definition.file || definitions.has(definition.id)) {
+                throw new Error('Unexpected forest asset in manifest');
+            }
+            definitions.set(definition.id, definition);
+        }
+        if ([...CHUNK_FILES.keys()].some(id => !definitions.has(id))) throw new Error('Forest manifest is incomplete');
         this.templates = new Map();
         let done = 0;
         // Two concurrent parses keep peak GPU upload / CPU work bounded.
@@ -100,15 +126,17 @@ export class Forest {
         const bounds = this.screenMesh.geometry.boundingBox;
         const scale = this.screenMesh.getWorldScale(new THREE.Vector3());
         this.screenSize = bounds.getSize(new THREE.Vector3()).multiply(scale);
-        // The export shrinks its static TV image inside a solid beveled panel.
-        // Cover that panel up to its 32 mm bevel, not just the small image mesh.
+        // The static TV image has the correct opening aspect ratio, while the
+        // frame bounding box also includes its thicker lower cabinet edge.
+        // Expand the TV plane uniformly to the inner frame width so the live
+        // game fills the glass without spilling down onto the blue controls.
         const bezel = this.games.root.getObjectByName('HOB_Games_Machine_ScreenFrame');
         if (bezel?.geometry) {
             bezel.geometry.computeBoundingBox();
             const size = bezel.geometry.boundingBox.getSize(new THREE.Vector3());
             const bezelScale = bezel.getWorldScale(new THREE.Vector3());
-            this.screenSize.x = (size.x - .064) * bezelScale.x;
-            this.screenSize.y = (size.y - .064) * bezelScale.y;
+            const openingWidth = (size.x - .048) * bezelScale.x;
+            this.screenSize.multiplyScalar(openingWidth / this.screenSize.x);
         }
         // The exported loading text and bars otherwise float over the live game.
         this.games.root.traverse(object => {
@@ -121,10 +149,11 @@ export class Forest {
             this.slots.push(slot);
         });
         this.lookAhead();
-        this.updateLights(0);
+        this.updateLights();
         await this.renderer.compileAsync(this.scene, this.camera);
         if (this.disposed) return;
         this.state = 'forest';
+        this.host.classList.add('scene-ready');
         this.onState('forest');
         this.syncRendering();
     }
@@ -145,7 +174,6 @@ export class Forest {
         source.position.z -= bounds.max.z;
         root.add(source);
         const lamps = [];
-        const flames = [];
         const remove = [];
         source.traverse(object => {
             if (id === 'GAMES' && /BEHIND_B/.test(object.name)) object.position.z -= 70 - 68.76612854003906;
@@ -156,15 +184,23 @@ export class Forest {
                 remove.push({ object, marker });
             }
             if (!object.isMesh) return;
-            if (/Flame/.test(object.name)) flames.push({ object, scale: object.scale.clone() });
             object.castShadow = false;
             object.receiveShadow = false;
+            const materials = Array.isArray(object.material) ? object.material : [object.material];
+            materials.forEach(material => Object.values(material).forEach(value => {
+                if (value?.isTexture) value.anisotropy = 1;
+            }));
+            // Chunk meshes do not animate independently. Freezing their local
+            // matrices removes per-frame update work while the moving chunk
+            // root still updates their world matrices correctly.
+            object.updateMatrix();
+            object.matrixAutoUpdate = false;
         });
         remove.forEach(({ object, marker }) => { object.parent.add(marker); object.removeFromParent(); });
-        return { root, lamps, flames, id, bounds: { length: LENGTH, front: 0, back: -LENGTH } };
+        return { root, lamps, id, bounds: { length: LENGTH, front: 0, back: -LENGTH } };
     }
 
-    updateLights(time) {
+    updateLights() {
         this.scene.updateMatrixWorld(true);
         const active = [...this.slots, this.games].filter(chunk => chunk?.root.visible);
         const candidates = active.flatMap(chunk => chunk.lamps.map(lamp => {
@@ -178,11 +214,8 @@ export class Forest {
             light.color.copy(lamp.color);
             light.distance = lamp.range;
             const fade = 1 - THREE.MathUtils.smoothstep(lamp.distance, 48, 62);
-            light.intensity = lamp.intensity * fade * (1 + .025 * Math.sin(time * 3 + lamp.position.z));
+            light.intensity = lamp.intensity * fade;
         });
-        active.forEach(chunk => chunk.flames.forEach(({ object, scale }, i) => {
-            object.scale.y = scale.y * (1 + .045 * Math.sin(time * 5 + i * 1.9));
-        }));
     }
 
     lookAhead() {
@@ -201,10 +234,14 @@ export class Forest {
         this.lastTime = null;
         this.renderer.setAnimationLoop(null);
         if (this.disposed || !['forest', 'flight', 'arcade'].includes(this.state) || document.hidden) return;
+        if (this.state === 'arcade') {
+            this.renderStatic();
+            return;
+        }
         if (this.state === 'flight' || this.mode === 'creative') {
             this.renderer.setAnimationLoop(time => this.frame(time));
         } else if (this.state === 'forest') {
-            this.updateLights(0);
+            this.updateLights();
             this.renderer.render(this.scene, this.camera);
         }
     }
@@ -212,13 +249,14 @@ export class Forest {
     showCabinet() {
         this.camera.position.copy(this.screenCenter).addScaledVector(this.screenNormal, this.cabinetDistance());
         this.camera.lookAt(this.screenCenter);
-        if (this.surface) this.cssRenderer.render(this.cssScene, this.camera);
+        this.renderStatic();
     }
 
     setGameReady(ready) {
         this.games.root.traverse(object => {
             if (/FixedJoystick/.test(object.name)) object.visible = !ready;
         });
+        this.renderStatic();
     }
 
     resume() {
@@ -283,14 +321,27 @@ export class Forest {
         element.style.width = `${width}px`;
         element.style.height = `${height}px`;
         const surface = new CSS3DObject(element);
-        surface.position.copy(this.screenCenter).addScaledVector(this.screenNormal, .022);
+        // The exported glass opening sits a little above the TV mesh origin.
+        // Apply the correction in screen-local space so it remains aligned
+        // when the cabinet is viewed at another aspect ratio.
+        const screenUp = new THREE.Vector3(0, 1, 0).applyQuaternion(this.screenRotation);
+        surface.position.copy(this.screenCenter)
+            .addScaledVector(screenUp, .026)
+            .addScaledVector(this.screenNormal, .022);
         surface.quaternion.copy(this.screenRotation);
         surface.scale.setScalar(this.screenSize.x / width);
         this.cssScene.add(surface);
         this.surface = surface;
         this.screenMesh.visible = false;
         this.screenHost.hidden = false;
-        this.cssRenderer.render(this.cssScene, this.camera);
+        this.renderStatic();
+    }
+
+    renderStatic() {
+        if (this.disposed || document.hidden) return;
+        this.updateLights();
+        this.renderer.render(this.scene, this.camera);
+        if (this.surface) this.cssRenderer.render(this.cssScene, this.camera);
     }
 
     back() {
@@ -326,17 +377,15 @@ export class Forest {
             });
             this.lookAhead();
         } else if (this.state === 'flight') this.updateFlight(elapsed);
-        if (!(this.state === 'arcade' && this.mode === 'normal')) {
-            this.updateLights(time / 1000);
-            this.renderer.render(this.scene, this.camera);
-            if (this.surface) this.cssRenderer.render(this.cssScene, this.camera);
-        }
+        this.updateLights();
+        this.renderer.render(this.scene, this.camera);
+        if (this.surface) this.cssRenderer.render(this.cssScene, this.camera);
     }
 
     resize() {
         this.camera.aspect = innerWidth / innerHeight;
         this.camera.updateProjectionMatrix();
-        this.renderer.setPixelRatio(Math.min(devicePixelRatio, innerWidth < 700 ? 1.25 : 1.5));
+        this.renderer.setPixelRatio(Math.min(devicePixelRatio, this.lowPower ? 1 : 1.25));
         this.renderer.setSize(innerWidth, innerHeight);
         this.cssRenderer.setSize(innerWidth, innerHeight);
         if (this.state === 'arcade') {
@@ -369,6 +418,7 @@ export class Forest {
         this.surface?.element.remove();
         this.renderer.dispose();
         this.renderer.domElement.remove();
+        this.host.classList.remove('scene-ready');
         this.cssRenderer.domElement.remove();
         window.removeEventListener('resize', this.resize);
         this.host.removeEventListener('pointermove', this.onPointer);

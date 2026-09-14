@@ -1,11 +1,12 @@
-<!-- Файл: index.html | Игра: Покорми Птиц! | Версия: 1.0.18 -->
+<!-- Файл: index.html | Игра: Покорми Птиц! | Версия: 1.0.19 -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.googletagmanager.com; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com; img-src 'self' data: blob: https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
-    <title>Покорми Птиц! V1.0.18</title>
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>Покорми Птиц! V1.0.19</title>
     
     <!-- Подключаем скрипт куки и аналитики из корня сайта (2 шага назад) -->
     <script src="../../analytics.js"></script>
@@ -59,7 +60,7 @@
                 <button class="menu-btn exit-menu-btn" id="exit-game" type="button">Выйти из игры</button>
                 
                 <!-- Версия игры -->
-                <div class="game-version">V1.0.18</div>
+                <div class="game-version">V1.0.19</div>
             </div>
 
             <!-- 2. Выбор языка -->
@@ -81,17 +82,20 @@
                 
                 <div class="setting-row">
                     <button class="audio-btn active btn-music-sync" id="txt-music-set" data-action="toggle-audio" data-audio-id="audio-music" data-sync-class="btn-music-sync">🎵 Музыка</button>
-                    <input type="range" min="0" max="100" value="34" data-volume="audio-music">
+                    <input id="game-music-volume" type="range" min="0" max="100" value="13" data-volume="audio-music">
+                    <output class="volume-percent" for="game-music-volume" data-volume-output="audio-music">13%</output>
                 </div>
                 
                 <div class="setting-row">
                     <button class="audio-btn active btn-nature-sync" id="txt-nature-set" data-action="toggle-audio" data-audio-id="audio-nature" data-sync-class="btn-nature-sync">🌲 Природа</button>
-                    <input type="range" min="0" max="100" value="69" data-volume="audio-nature">
+                    <input id="game-nature-volume" type="range" min="0" max="100" value="33" data-volume="audio-nature">
+                    <output class="volume-percent" for="game-nature-volume" data-volume-output="audio-nature">33%</output>
                 </div>
 
                 <div class="setting-row">
                     <button class="audio-btn active btn-sfx-sync" id="txt-sfx-set" data-action="toggle-sfx">🔊 Звуки</button>
-                    <input type="range" min="0" max="100" value="100" data-volume="sfx">
+                    <input id="game-sfx-volume" type="range" min="0" max="100" value="55" data-volume="sfx">
+                    <output class="volume-percent" for="game-sfx-volume" data-volume-output="sfx">55%</output>
                 </div>
                 
                 <div class="sfx-test-row" style="justify-content: center;">

@@ -93,8 +93,10 @@ body { background-color: #121214; color: white; display: flex; align-items: cent
 
 /* Настройки (Ползунки) */
 .setting-row { display: flex; align-items: center; justify-content: space-between; width: 450px; margin: 10px 0; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 10px; }
+#menu-settings .setting-row { display: grid; grid-template-columns: minmax(110px, auto) minmax(140px, 220px) 52px; gap: 14px; width: 520px; max-width: calc(100% - 24px); }
 .setting-label { font-size: 18px; font-weight: bold; color: white; }
-.setting-row input[type=range] { width: 220px; cursor: pointer; }
+.setting-row input[type=range] { width: 100%; cursor: pointer; }
+.volume-percent { min-width: 52px; text-align: right; font-variant-numeric: tabular-nums; font-weight: bold; color: #fff; }
 .sfx-test-row { display: flex; gap: 15px; margin-top: 10px; margin-bottom: 20px; }
 .test-btn { padding: 8px 15px; border-radius: 5px; border: none; background: #d35400; color: white; cursor: pointer; font-weight: bold; }
 .test-btn:hover { background: #e67e22; }

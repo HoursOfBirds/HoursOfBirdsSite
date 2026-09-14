@@ -46,7 +46,7 @@ const GAME_TEXTS = {
         text_ad_alert: "Спасибо, что решили включить рекламу. Но сейчас её нет физически, поэтому включить её не получится. Надеюсь добавить её позже.\n\nОднако вы можете подписаться на Telegram- или YouTube-канал — буду благодарен!",
 
         title_bugs: "Сообщить об ошибке",
-        text_bugs: "Известные проблемы:\n- Птицы иногда летают спиной (ИСПРАВЛЕНО!)\n- Птицы иногда выходят за край стола\n- Не пугайтесь невидимых птиц! Они подгружаются. Подождите немного: скорость зависит от вашего интернета. В будущем я постараюсь оптимизировать этот момент. Хорошей игры!\n\nЧтобы сообщить об ошибке, перейдите в Telegram-канал разработчика и опишите проблему в комментариях, приложив фото или видео. Добавьте тег #проблема — так я быстрее среагирую. Спасибо за вклад в развитие проекта!",
+        text_bugs: "Известные проблемы:\n- Птицы иногда летают спиной (ИСПРАВЛЕНО!)\n- Птицы иногда выходят за край стола (ИСПРАВЛЕНО!)\n- Не пугайтесь невидимых птиц! Они подгружаются. Подождите немного: скорость зависит от вашего интернета. В будущем я постараюсь оптимизировать этот момент. Хорошей игры!\n\nЧтобы сообщить об ошибке, перейдите в Telegram-канал разработчика и опишите проблему в комментариях, приложив фото или видео. Добавьте тег #проблема — так я быстрее среагирую. Спасибо за вклад в развитие проекта!",
 
         title_socials: "Соцсети разработчика",
         social_links: [
@@ -102,7 +102,7 @@ const GAME_TEXTS = {
         text_ad_alert: "Thank you for deciding to enable ads. However, they are not available yet, so it is not possible to turn them on. I hope to add them later.\n\nIn the meantime, you can subscribe to my Telegram or YouTube channel. I would be grateful!",
 
         title_bugs: "Report a Bug",
-        text_bugs: "Known issues:\n- Birds sometimes fly backwards (FIXED!)\n- Birds sometimes land off the table edges\n- Don't worry about invisible birds: they are loading. Please wait a little; loading speed depends on your connection. I will optimize this in the future. Enjoy the game!\n\nTo report an issue, visit the developer's Telegram channel and describe it in the comments, attaching a photo or video. Add the #bug tag so I can react faster. Thank you for contributing to the project!",
+        text_bugs: "Known issues:\n- Birds sometimes fly backwards (FIXED!)\n- Birds sometimes land off the table edges (FIXED!)\n- Don't worry about invisible birds: they are loading. Please wait a little; loading speed depends on your connection. I will optimize this in the future. Enjoy the game!\n\nTo report an issue, visit the developer's Telegram channel and describe it in the comments, attaching a photo or video. Add the #bug tag so I can react faster. Thank you for contributing to the project!",
 
         title_socials: "Developer Socials",
         social_links: [

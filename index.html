@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.googletagmanager.com; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com; img-src 'self' data: blob: https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Hours of Birds</title>
     <link rel="icon" href="1.jpg">
     <link rel="stylesheet" href="forest.css">
@@ -11,7 +12,7 @@
     <script src="analytics.js" defer></script>
     <script type="module" src="site.js"></script>
 </head>
-<body data-mode="normal" data-phase="loading">
+<body data-mode="normal" data-phase="idle">
     <div id="forest" aria-label="Ночной лес"></div>
     <div id="arcade-screen" hidden></div>
     <div class="corner-controls">
@@ -43,11 +44,11 @@
     </header>
     <dialog id="volume-dialog" aria-labelledby="volume-title">
         <h2 id="volume-title" data-text="volumeTitle">Настройка громкости</h2>
-        <label><span data-text="music">Музыка</span><input id="music-volume" type="range" min="0" max="100" value="34"><output for="music-volume">34%</output></label>
-        <label><span data-text="sounds">Звуки</span><input id="sounds-volume" type="range" min="0" max="100" value="69"><output for="sounds-volume">69%</output></label>
+        <label><span data-text="music">Музыка</span><input id="music-volume" type="range" min="0" max="100" value="13"><output for="music-volume">13%</output></label>
+        <label><span data-text="sounds">Звуки</span><input id="sounds-volume" type="range" min="0" max="100" value="33"><output for="sounds-volume">33%</output></label>
         <button type="button" id="volume-close" data-text="close">Закрыть</button>
     </dialog>
-    <div class="scene-status" id="scene-status" role="status">
+    <div class="scene-status" id="scene-status" role="status" hidden>
         <span id="status-text">Загрузка леса…</span>
         <progress id="scene-progress" max="4" value="0" aria-label="Загрузка леса"></progress>
         <button type="button" id="retry-scene" hidden data-text="retry">Повторить</button>

@@ -4,8 +4,16 @@ const GA_ID = 'G-VQQGBNZLET';
 const CONSENT_KEY = 'cookieConsent';
 let analyticsInjected = false;
 
+function readConsent() {
+    try { return localStorage.getItem(CONSENT_KEY); } catch { return null; }
+}
+
+function writeConsent(value) {
+    try { localStorage.setItem(CONSENT_KEY, value); } catch { /* Storage may be disabled. */ }
+}
+
 function injectGoogleAnalytics() {
-    if (analyticsInjected || localStorage.getItem(CONSENT_KEY) !== 'true') return;
+    if (analyticsInjected || readConsent() !== 'true') return;
 
     analyticsInjected = true;
     window[`ga-disable-${GA_ID}`] = false;
@@ -89,12 +97,12 @@ function showConsentBanner() {
     const acceptButton = createButton('Разрешить', '#4CAF50');
 
     declineButton.addEventListener('click', () => {
-        localStorage.setItem(CONSENT_KEY, 'false');
+        writeConsent('false');
         disableGoogleAnalytics();
         removeConsentBanner();
     });
     acceptButton.addEventListener('click', () => {
-        localStorage.setItem(CONSENT_KEY, 'true');
+        writeConsent('true');
         removeConsentBanner();
         injectGoogleAnalytics();
     });
@@ -133,8 +141,8 @@ function createConsentSettingsButton() {
 document.addEventListener('DOMContentLoaded', () => {
     // The homepage owns consent UI while the game is displayed inside its
     // cabinet. Do not place a second fixed banner inside the CSS3D screen.
-    if (new URLSearchParams(location.search).get('arcade') === '1') return;
-    const consent = localStorage.getItem(CONSENT_KEY);
+    if (window.parent !== window && new URLSearchParams(location.search).get('arcade') === '1') return;
+    const consent = readConsent();
     if (consent === 'true') injectGoogleAnalytics();
     else if (consent !== 'false') showConsentBanner();
     else disableGoogleAnalytics();
