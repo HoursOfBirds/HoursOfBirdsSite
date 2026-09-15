@@ -13,6 +13,8 @@ let state = 'idle';
 let frame;
 let forestLoad;
 let forestGeneration = 0;
+let panelCollapsedByUser = false;
+let panelCollapsedForFlight = false;
 const gameUrl = new URL('games/bird_feeder/', location.href);
 const play = document.getElementById('btn-game');
 const status = document.getElementById('scene-status');
@@ -29,7 +31,9 @@ function translate() {
     document.querySelectorAll('[data-text]').forEach(element => { element.textContent = texts[language][element.dataset.text]; });
     document.querySelectorAll('[data-site-language]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.siteLanguage === language)));
     if (state === 'loading' || state === 'error') statusText.textContent = texts[language][state];
-    panelToggle.textContent = texts[language][panel.hidden ? 'show' : 'hide'];
+    const panelCollapsed = panelCollapsedByUser || panelCollapsedForFlight;
+    panelToggle.textContent = texts[language][panelCollapsed ? 'show' : 'hide'];
+    panelToggle.setAttribute('aria-expanded', String(!panelCollapsed));
     document.querySelector('.mode-switch').setAttribute('aria-label', language === 'ru' ? 'Режим сайта' : 'Site mode');
     document.querySelector('.language-switch').setAttribute('aria-label', language === 'ru' ? 'Язык' : 'Language');
     document.querySelector('.primary-nav').setAttribute('aria-label', language === 'ru' ? 'Главное меню' : 'Main menu');
@@ -42,6 +46,14 @@ function translate() {
         button.setAttribute('aria-pressed', String(channel.enabled));
     }
     frame?.contentWindow?.postMessage({ type: 'site-language', language }, location.origin);
+}
+
+function applyPanelState() {
+    const collapsed = panelCollapsedByUser || panelCollapsedForFlight;
+    panel.classList.toggle('is-collapsed', collapsed);
+    panel.setAttribute('aria-hidden', String(collapsed));
+    if (collapsed && panel.contains(document.activeElement)) document.activeElement.blur();
+    translate();
 }
 
 function syncMode() {
@@ -64,6 +76,8 @@ function syncMode() {
 
 function onState(next, done) {
     state = next;
+    if (next === 'flight') panelCollapsedForFlight = true;
+    if (['idle', 'forest', 'error'].includes(next)) panelCollapsedForFlight = false;
     document.body.dataset.phase = next;
     status.hidden = !['loading', 'error'].includes(next);
     retry.hidden = next !== 'error';
@@ -77,7 +91,7 @@ function onState(next, done) {
         frame = null;
         document.getElementById('arcade-screen').hidden = true;
     }
-    translate();
+    applyPanelState();
 }
 
 function enterGame(selectedMode) {
@@ -188,9 +202,8 @@ window.addEventListener('pagehide', event => { if (!event.persisted) { forestGen
 window.addEventListener('pageshow', event => { if (event.persisted) { syncMode(); audio.sync(); } });
 retry.addEventListener('click', init);
 panelToggle.addEventListener('click', () => {
-    panel.hidden = !panel.hidden;
-    panelToggle.setAttribute('aria-expanded', String(!panel.hidden));
-    translate();
+    panelCollapsedByUser = !panelCollapsedByUser;
+    applyPanelState();
 });
 document.addEventListener('pointerdown', () => audio.unlock());
 document.addEventListener('keydown', () => audio.unlock());

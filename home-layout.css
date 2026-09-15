@@ -1,6 +1,7 @@
 /* Central card follows the original homepage; only the backdrop is feathered. */
 body { min-height: 100svh; }
-.site-header { position: relative; isolation: isolate; display: block; width: min(410px, calc(100% - 40px)); margin: 0 auto 36px; padding: 30px 36px 26px; border: 0; background: none; text-align: center; }
+.site-header { position: relative; isolation: isolate; display: block; width: min(410px, calc(100% - 40px)); margin: 0 auto 36px; padding: 30px 36px 26px; border: 0; background: none; text-align: center; transform: translate3d(0, 0, 0); opacity: 1; transition: transform .72s cubic-bezier(.65, 0, .35, 1), opacity .42s ease; will-change: transform, opacity; }
+.site-header.is-collapsed { transform: translate3d(0, calc(-100% - 52px), 0); opacity: 0; pointer-events: none; }
 .site-header::before { content: ''; position: absolute; z-index: -1; inset: -18px -30px; background: rgba(22,25,27,.66); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); mask-image: linear-gradient(to right, transparent, black 14%, black 86%, transparent), linear-gradient(to bottom, transparent, black 5%, black 95%, transparent); mask-composite: intersect; pointer-events: none; }
 .brand { flex-direction: column; gap: 18px; }
 .brand img { width: 112px; height: 112px; border: 3px solid #69b575; }
@@ -45,3 +46,4 @@ body[data-phase=arcade][data-mode=normal] #forest { visibility: hidden; }
   #volume-dialog { padding: 20px 12px; }
 }
 @media(max-height: 650px) and (min-width: 700px) { .site-header { margin-top: 0; padding-top: 18px; } .brand img { width: 66px; height: 66px; } .primary-nav { gap: 7px; } .primary-nav a { padding: 9px; } .description { margin: 10px 0 16px; } }
+@media (prefers-reduced-motion: reduce) { .site-header { transition-duration: .01ms; } }
